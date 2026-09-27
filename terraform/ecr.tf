@@ -78,7 +78,7 @@ resource "aws_ecr_repository_policy" "paysim_fraud_pipeline_ecr" {
             "aws:SourceAccount" = data.aws_caller_identity.current.account_id
           }
           ArnLike = {
-            "aws:SourceArn" = "arn:aws:emr-serverless:${var.aws_region}:${data.aws_caller_identity.current.account_id}:/applications/${var.emr_application_id}"
+            "aws:SourceArn" = "arn:aws:emr-serverless:${var.aws_region}:${data.aws_caller_identity.current.account_id}:/applications/${aws_emrserverless_application.paysim_fraud_pipeline_emr.id}"
           }
         }
       }
