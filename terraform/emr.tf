@@ -18,6 +18,11 @@ resource "aws_emrserverless_application" "paysim_fraud_pipeline_emr" {
     idle_timeout_minutes = 15
   }
 
+  network_configuration {
+    subnet_ids         = aws_subnet.private[*].id
+    security_group_ids = [aws_security_group.msk_emr.id]
+  }
+
   # used for CD pipeline: allow image tag updates outside Terraform
   lifecycle {
     ignore_changes = [image_configuration]
