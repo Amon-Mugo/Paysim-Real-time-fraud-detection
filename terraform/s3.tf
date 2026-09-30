@@ -25,7 +25,7 @@ resource "aws_s3_bucket_public_access_block" "paysim_fraud_pipeline_raw" {
   restrict_public_buckets = true
 }
 
-# Raw data has no self-versioning mechanism of its own (unlike Iceberg
+# Raw data has no self-versioning mechanism of its own unlike Iceberg
 
 resource "aws_s3_bucket_versioning" "paysim_fraud_pipeline_raw" {
   bucket = aws_s3_bucket.paysim_fraud_pipeline_raw.id
