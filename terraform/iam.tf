@@ -4,6 +4,9 @@ locals {
   msk_cluster_arn = aws_msk_serverless_cluster.paysim_fraud_pipeline_msk.arn
   msk_topic_arn   = "${replace(local.msk_cluster_arn, ":cluster/", ":topic/")}/*"
   msk_group_arn   = "${replace(local.msk_cluster_arn, ":cluster/", ":group/")}/*"
+  glue_database_arn = aws_glue_catalog_database.paysim_fraud_pipeline.arn
+  glue_table_arn    = "${replace(local.glue_database_arn, ":database/", ":table/")}/*"
+  glue_catalog_arn  = "arn:aws:glue:${element(split(":", local.glue_database_arn), 3)}:${data.aws_caller_identity.current.account_id}:catalog"
 }
 
 resource "aws_iam_role" "paysim_fraud_pipeline_ingestion" {
@@ -215,4 +218,47 @@ resource "aws_iam_policy" "paysim_fraud_pipeline_emr_ecr_pull" {
 resource "aws_iam_role_policy_attachment" "paysim_fraud_pipeline_emr_ecr_pull" {
   role       = aws_iam_role.paysim_fraud_pipeline_emr_execution.name
   policy_arn = aws_iam_policy.paysim_fraud_pipeline_emr_ecr_pull.arn
+}
+
+# Glue Data Catalog access for the Iceberg catalog.
+resource "aws_iam_policy" "paysim_fraud_pipeline_emr_glue_access" {
+  name        = "paysim-fraud-pipeline-emr-glue-access-policy"
+  description = "Allows EMR Serverless to manage Iceberg tables in the pipeline's Glue database"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "glue:GetDatabase",
+          "glue:GetDatabases"
+        ]
+        Resource = [
+          local.glue_catalog_arn,
+          local.glue_database_arn
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "glue:CreateTable",
+          "glue:DeleteTable",
+          "glue:GetTable",
+          "glue:GetTables",
+          "glue:UpdateTable"
+        ]
+        Resource = [
+          local.glue_catalog_arn,
+          local.glue_database_arn,
+          local.glue_table_arn
+        ]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "paysim_fraud_pipeline_emr_glue_access" {
+  role       = aws_iam_role.paysim_fraud_pipeline_emr_execution.name
+  policy_arn = aws_iam_policy.paysim_fraud_pipeline_emr_glue_access.arn
 }
