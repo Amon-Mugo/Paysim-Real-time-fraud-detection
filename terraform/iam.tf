@@ -1,9 +1,9 @@
 # IAM rol
 
 locals {
-  msk_cluster_arn = aws_msk_serverless_cluster.paysim_fraud_pipeline_msk.arn
-  msk_topic_arn   = "${replace(local.msk_cluster_arn, ":cluster/", ":topic/")}/*"
-  msk_group_arn   = "${replace(local.msk_cluster_arn, ":cluster/", ":group/")}/*"
+  msk_cluster_arn   = aws_msk_serverless_cluster.paysim_fraud_pipeline.arn
+  msk_topic_arn     = "${replace(local.msk_cluster_arn, ":cluster/", ":topic/")}/*"
+  msk_group_arn     = "${replace(local.msk_cluster_arn, ":cluster/", ":group/")}/*"
   glue_database_arn = aws_glue_catalog_database.paysim_fraud_pipeline.arn
   glue_table_arn    = "${replace(local.glue_database_arn, ":database/", ":table/")}/*"
   glue_catalog_arn  = "arn:aws:glue:${element(split(":", local.glue_database_arn), 3)}:${data.aws_caller_identity.current.account_id}:catalog"
