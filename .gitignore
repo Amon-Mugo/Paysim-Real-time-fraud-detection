@@ -1,1 +1,5 @@
 venv/
+data/
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
