@@ -30,6 +30,7 @@ class GeneratorConfig:
     random_seed: int = _DEFAULT_RANDOM_SEED
     structuring_scenarios: int = _DEFAULT_STRUCTURING_SCENARIOS
     geo_anomaly_scenarios: int = _DEFAULT_GEO_ANOMALY_SCENARIOS
+    
 
     def __post_init__(self)-> None:
         
