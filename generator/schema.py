@@ -8,6 +8,12 @@ from dataclasses import asdict,dataclass
 
 from decimal import Decimal
 from typing import Any
+from datetime import datetime
+
+def format_event_time(moment: datetime) -> str:
+    """Render an event time as ISO-8601 with millisecond precision."""
+    return moment.isoformat(timespec="milliseconds")
+
 
 PAYSIM_ID_PREFIX = "PS"  #this will represent the already data in paysim
 INJECTED_ID_PREFIX = "INJ" # this will represent the injected data for tests scripts and audit logs
