@@ -12,8 +12,8 @@ COORDINATE_PRECISION = 5  #ROUND THE coordinates to 5 decimal placeses
 
 @dataclass(frozen= True)
 class Location:
-    longitude: float
     latitude: float
+    longitude: float
 
 @dataclass(frozen=True)
 class City:

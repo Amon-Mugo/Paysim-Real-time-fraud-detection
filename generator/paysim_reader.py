@@ -43,26 +43,26 @@ class PaySimRecord:
     new_balance_dest: float
     is_fraud: bool
 
-    def read_paysim(settings: GeneratorConfig) -> Iterator[PaySimRecord]:
-        sequence = 0
-        previous_step = -1
+def read_paysim(settings: GeneratorConfig) -> Iterator[PaySimRecord]:
+    sequence = 0
+    previous_step = -1
 
-        with settings.csv_path.open(newline="", encoding="utf-8") as handle:
-            reader = csv.DictReader(handle)
-            _validate_header(reader.fieldnames)
+    with settings.csv_path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        _validate_header(reader.fieldnames)
 
-            for step, rows in groupby(reader, key=lambda row: int(row["step"])):
-                if step <= previous_step:
-                    raise ValueError("PaySim step must be in strictly ascending order")
-                previous_step = step
+        for step, rows in groupby(reader, key=lambda row: int(row["step"])):
+            if step <= previous_step:
+                raise ValueError("PaySim step must be in strictly ascending order")
+            previous_step = step
 
-                step_rows = list(rows)
-                step_start = settings.simulation_start + (step - 1) * PAYSIM_STEP_DURATION #gives paysim a proper datetime based on the steps
-                spacing = PAYSIM_STEP_DURATION / len(step_rows) #enables us to calculate message delay in oder to send message intervals
+            step_rows = list(rows)
+            step_start = settings.simulation_start + (step - 1) * PAYSIM_STEP_DURATION #gives paysim a proper datetime based on the steps
+            spacing = PAYSIM_STEP_DURATION / len(step_rows) #enables us to calculate message delay in oder to send message intervals
 
-                for position, row in enumerate(step_rows):
-                    sequence += 1
-                    yield _to_record(row, sequence, step, step_start + position * spacing)
+            for position, row in enumerate(step_rows):
+                sequence += 1
+                yield _to_record(row, sequence, step, step_start + position * spacing)
 
 
 def _validate_header (fieldnames: Sequence[str]| None)-> None:

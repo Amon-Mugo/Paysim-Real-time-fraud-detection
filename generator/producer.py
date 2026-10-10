@@ -1,6 +1,6 @@
 # used for real time streaming kafka .main purpose is to read baseline transactions from datasets
 # and alsoe inject the synthetic  records ,merge them chronologically in event time order
-# publish payload to kafka topic and write the fraud lables
+# publish payload to kafka topic and write the fraud labels
 
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ class StreamEvent(Protocol):
     def transaction(self) -> Transaction: ...
 
     @property
-    def lable(self) -> GroundTruthEntry | None: ...
+    def label(self) -> GroundTruthEntry | None: ...
 
 
 # used to take the paysim row and turns them into a publishable unit
@@ -49,14 +49,14 @@ class StreamEvent(Protocol):
 class PaysimEvent:
     event_time: datetime
     transaction: Transaction
-    lable: GroundTruthEntry | None
+    label: GroundTruthEntry | None
 
 
 # used to publish a summary of the whole kafka message executon
 @dataclass(frozen=True)
 class ReplayStats:
     published: int
-    lablled: int
+    labelled: int
     failed: int
     elapsed_seconds: float
 
@@ -129,7 +129,7 @@ def replay(
         None  # set none initilay we need to set the first transaction
     )
     published = 0  # messages sent
-    labelled = 0  # groundtruth lables logged
+    labelled = 0  # groundtruth labels logged
     started = time.monotonic()
     
     with GroundTruthWriter(settings.ground_truth_path) as ground_truth:
@@ -150,8 +150,8 @@ def replay(
                 )  # sends current transaction to kafka
 
                
-                if event.lable is not None:
-                    ground_truth.write(event.lable)
+                if event.label is not None:
+                    ground_truth.write(event.label)
                     labelled += 1
 
                 published += 1
@@ -238,5 +238,5 @@ def _to_stream_event(record: PaySimRecord) -> PaysimEvent:
         else None
     )
     return PaysimEvent(
-        event_time=record.event_time, transaction=transaction, lable=label
+        event_time=record.event_time, transaction=transaction, label=label
     )

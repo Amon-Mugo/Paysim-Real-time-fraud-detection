@@ -22,7 +22,7 @@ class GroundTruthEntry:
     transaction_id: str  # identify transactions
     pattern: FraudPattern  # to catogorise fraud
     event_time: datetime  # time when fraud occured
-    scenario_id: str 
+    scenario_id: str | None = None
 
     # used to serialise the data into json to be sored into disk and not for kafka to use 
     def to_json(self) -> str: 

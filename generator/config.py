@@ -9,7 +9,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 PAYSIM_STEP_DURATION = timedelta(hours=1)
 PAYSIM_STEP_COUNT = 743  # steps 1-743, so the replay window is 743 hours
 
-_DEFAULT_CSV_PATH = PROJECT_ROOT/"data"/"paysim_dataset.csv"
+_DEFAULT_CSV_PATH = PROJECT_ROOT/"data"/"paysim dataset.csv"
 _DEFAULT_GROUND_TRUTH_PATH = PROJECT_ROOT/"data"/"ground_truth.jsonl"
 _DEFAULT_KAFKA_BOOTSTRAP_SERVERS = "localhost:9092"
 _DEFAULT_KAFKA_TOPIC = "transactions"
