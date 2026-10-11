@@ -50,6 +50,7 @@ def _build_parser()-> argparse.ArgumentParser:
     parser.add_argument("--structuring-scenarios", type=int, help="number of structuring scenarios")
     parser.add_argument(
         "--geo-anomaly-scenarios", type=int, help="number of geo-anomaly scenarios", )
+    parser.add_argument("--velocity-scenarios", type=int, help="number of velocity scenarios")
     parser.add_argument("--max-events",type=_positive_int, help="stop after this many events, for smoke tests", )
     parser.add_argument("--log-level",default="INFO",choices=["DEBUG", "INFO", "WARNING", "ERROR"],help="logging verbosity (default: INFO)",)
     return parser
@@ -67,6 +68,7 @@ def _reslove_settings (args: argparse.Namespace)-> GeneratorConfig:
         "random_seed": args.seed,
         "structuring_scenarios":args.structuring_scenarios,
         "geo_anomaly_scenarios":args.geo_anomaly_scenarios,
+        "velocity_scenarios":args.velocity_scenarios,
     }
     provided = {name: value for name, value in override.items() if value is not None}
 
@@ -80,8 +82,7 @@ def main (argv: Sequence[str] | None = None ) -> int:
     #ags now hold the squence of the cli commands of proper data types 
     #parse_args reposnible for conversion of said data types
 
-    logging.basicConfig(level= args.log_level,
-                        format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    logging.basicConfig(level= args.log_level,format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     #set up logging info based on the cli commands
     
     #life cycle of the cli commands

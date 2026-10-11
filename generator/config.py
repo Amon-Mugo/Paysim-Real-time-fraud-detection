@@ -18,6 +18,7 @@ _DEFAULT_REPLAY_SPEEDUP = 3600.0
 _DEFAULT_RANDOM_SEED = 42
 _DEFAULT_STRUCTURING_SCENARIOS = 50
 _DEFAULT_GEO_ANOMALY_SCENARIOS = 50
+_DEFAULT_VELOCITY_SCENARIOS = 50
 
 @dataclass(frozen=True)
 class GeneratorConfig:
@@ -30,6 +31,7 @@ class GeneratorConfig:
     random_seed: int = _DEFAULT_RANDOM_SEED
     structuring_scenarios: int = _DEFAULT_STRUCTURING_SCENARIOS
     geo_anomaly_scenarios: int = _DEFAULT_GEO_ANOMALY_SCENARIOS
+    velocity_scenarios: int = _DEFAULT_VELOCITY_SCENARIOS
     
 
     def __post_init__(self)-> None:
@@ -44,8 +46,9 @@ class GeneratorConfig:
         if not self.kafka_topic.strip():
             raise ValueError("kafka_topic must not be empty")
 
-        if self.structuring_scenarios < 0 or self.geo_anomaly_scenarios < 0:
+        if (self.structuring_scenarios < 0 or self.geo_anomaly_scenarios < 0 or self.velocity_scenarios < 0):
             raise ValueError("scenario counts must not be negative")
+        
         
     @classmethod
     def from_env(cls)-> GeneratorConfig:
@@ -84,7 +87,12 @@ class GeneratorConfig:
                 os.environ.get(
                     "GENERATOR_GEO_ANOMALY_SCENARIOS", _DEFAULT_GEO_ANOMALY_SCENARIOS
                 )
-            ),
+                ),
+                velocity_scenarios=int(
+                os.environ.get(
+                    "GENERATOR_VELOCITY_SCENARIOS", _DEFAULT_VELOCITY_SCENARIOS
+                    )
+                ),
             )
 
 config = GeneratorConfig.from_env()

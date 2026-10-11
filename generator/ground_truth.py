@@ -16,6 +16,7 @@ class FraudPattern(str, Enum):
     PAYSIM_FRAUD = "paysim_fraud"
     STRUCTURING = "structuring"
     GEO_ANOMALY = "geo_anomaly"
+    VELOCITY = "velocity"
 
 @dataclass(frozen=True)
 class GroundTruthEntry:  

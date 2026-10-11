@@ -26,6 +26,12 @@ STRUCTURING_MIN_TRANSFERS = 6
 STRUCTURING_MAX_TRANSFERS = 10
 STRUCTURING_MIN_GAP = timedelta(minutes=10)
 STRUCTURING_MAX_GAP = timedelta(minutes=40)
+VELOCITY_MIN_TRANSACTIONS = 15
+VELOCITY_MAX_TRANSACTIONS = 25
+VELOCITY_MIN_GAP = timedelta(seconds=5)
+VELOCITY_MAX_GAP = timedelta(seconds=40)
+VELOCITY_MIN_AMOUNT = 100.0
+VELOCITY_MAX_AMOUNT = 5_000.0
 
 GEO_BASELINE_EVENTS = 3
 GEO_MIN_BASELINE_GAP = timedelta(hours=1)
@@ -66,6 +72,7 @@ class ScenarioBuilder:
         self._account_numbers = itertools.count(1)
         self._structuring_numbers = itertools.count(1)
         self._geo_numbers = itertools.count(1)
+        self._velocity_numbers = itertools.count(1)
 
     def structuring(self, start: datetime) -> list[InjectedEvent]:
         """Build one structuring scenario beginning at `start`.
@@ -139,6 +146,42 @@ class ScenarioBuilder:
                 old_balance=balance,
                 location=self._distant_location(home) if is_anomaly else home,
                 pattern=FraudPattern.GEO_ANOMALY if is_anomaly else None,
+                scenario_id=scenario_id,
+            )
+            balance = event.transaction.new_balance_orig
+            events.append(event)
+        return events
+    def velocity(self, start: datetime) -> list[InjectedEvent]:
+        """Build one velocity scenario beginning at `start`.
+        One account fires a rapid burst of small cash-outs from its home
+        location. Every transaction is labelled, since the burst is scored
+        per scenario.
+        """
+        scenario_id = f"VEL-{next(self._velocity_numbers):05d}"
+        origin = self._new_account()
+        location = home_location(origin)
+
+        amounts = [
+            round(self._rng.uniform(VELOCITY_MIN_AMOUNT, VELOCITY_MAX_AMOUNT), 2)
+            for _ in range(
+                self._rng.randint(VELOCITY_MIN_TRANSACTIONS, VELOCITY_MAX_TRANSACTIONS)
+            )
+        ]
+        balance = round(sum(amounts) * self._rng.uniform(1.05, 1.5), 2)
+
+        events: list[InjectedEvent] = []
+        moment = start
+        for index, amount in enumerate(amounts):
+            if index > 0:
+                moment += self._gap(VELOCITY_MIN_GAP, VELOCITY_MAX_GAP)
+            event = self._event(
+                event_time=moment,
+                transaction_type="CASH_OUT",
+                amount=amount,
+                origin=origin,
+                old_balance=balance,
+                location=location,
+                pattern=FraudPattern.VELOCITY,
                 scenario_id=scenario_id,
             )
             balance = event.transaction.new_balance_orig
@@ -233,6 +276,8 @@ def plan_injections(settings: GeneratorConfig) -> list[InjectedEvent]:
         events.extend(builder.structuring(_random_start(rng, window_start, latest_start)))
     for _ in range(settings.geo_anomaly_scenarios):
         events.extend(builder.geo_anomaly(_random_start(rng, window_start, latest_start)))
+    for _ in range(settings.velocity_scenarios):
+        events.extend(builder.velocity(_random_start(rng, window_start, latest_start)))
 
     events.sort(key=lambda event: (event.event_time, event.transaction.transaction_id))
     return events
