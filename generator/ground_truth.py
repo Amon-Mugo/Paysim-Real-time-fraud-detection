@@ -38,13 +38,13 @@ class GroundTruthEntry:
     
     @classmethod  # used for deserialisation to build a new dataclass
     def from_json(cls, line: str) -> GroundTruthEntry:
-        data = json.loads(line)  # FIXED: json.loads() for string parsing (was json.load)
+        data = json.loads(line)  
 
         return cls(
             transaction_id=data["transaction_id"],
             pattern=FraudPattern(data["pattern"]),  
             scenario_id=data["scenario_id"],
-            event_time=datetime.fromisoformat(data["event_time"]),  # FIXED: datetime.fromisoformat() for ISO strings
+            event_time=datetime.fromisoformat(data["event_time"]), 
         )
 
 # file management for to_json
