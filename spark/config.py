@@ -10,7 +10,7 @@ import os  #used to read environment varriables and import operating system
 PROJECT_ROOT =Path(__file__).resolve().parents[1] #used to read the project root of the file of spark in order to read and write files
 
 _DEFAULT_KAFKA_BOOTSTRAP_SERVER = "localhost:9092" #kafka server for communication
-_DEFAULT_KAFKA_TOPIC = "transaction" #used to specify which message to stream
+_DEFAULT_KAFKA_TOPIC = "transactions" #used to specify which message to stream
 _DEFAULT_KAFKA_STARTING_OFFSETS = "earliest" # tells spark when to spark to read the message
 _DEFAULT_KAFKA_MAX_OFFSETS_PER_TRIGGER = 10_000 # used for rate limiting for spark to read the message
 _DEFAULT_CHECKPOINT_LOCATION = str(PROJECT_ROOT /"data" / "checkpoints" / "detection") #specify where spark will store the data internal state and its progress 
@@ -58,7 +58,7 @@ class DetectionConfig:
 
         if not self.kafka_topic.strip():
             raise ValueError("Kafka_topic must not be empty")
-        if self.kafka_starting_offsets  not in ("earliset","latest"):
+        if self.kafka_starting_offsets  not in ("earliest","latest"):
             raise ValueError("Kafka_starting_offsets must be 'earliest' or 'latest'")
         if self.kafka_max_offset_per_trigger <=0:
             raise ValueError("Kafka_max_offset_per_tigger must be positive")
@@ -76,7 +76,7 @@ class DetectionConfig:
             raise ValueError("structuring amount must satisy 0<min_amount <max_amount")
         if self.structuring_min_transfers < 2:
             raise ValueError("structuring_min_transfer must be at least 2")
-        if self.geo_max_speed_km <= 0:
+        if self.geo_max_speed_kmh <= 0:
             raise ValueError("geo_max_speed must be positive")
         if self.velocity_min_transactions < 2:
             raise ValueError("velocity_min_transactions must be at least 2")
@@ -84,10 +84,10 @@ class DetectionConfig:
     @classmethod
     def from_env(cls)-> DetectionConfig:
         return cls(
-            kafka_bootstrap_servers = os.environ.get("KAFKA_BOOTSRAP_SERVERS",_DEFAULT_KAFKA_BOOTSTRAP_SERVER),
+            kafka_bootstrap_servers = os.environ.get("KAFKA_BOOTSTRAP_SERVERS",_DEFAULT_KAFKA_BOOTSTRAP_SERVER),
              kafka_topic=os.environ.get("KAFKA_TOPIC", _DEFAULT_KAFKA_TOPIC),
             kafka_starting_offsets=os.environ.get("KAFKA_STARTING_OFFSETS", _DEFAULT_KAFKA_STARTING_OFFSETS),
-            kafka_max_offsets_per_trigger=int( os.environ.get( "KAFKA_MAX_OFFSETS_PER_TRIGGER",_DEFAULT_KAFKA_MAX_OFFSETS_PER_TRIGGER, )
+            kafka_max_offset_per_trigger=int( os.environ.get( "KAFKA_MAX_OFFSETS_PER_TRIGGER",_DEFAULT_KAFKA_MAX_OFFSETS_PER_TRIGGER, )
             ),
             checkpoint_location=os.environ.get("DETECTION_CHECKPOINT_LOCATION", _DEFAULT_CHECKPOINT_LOCATION
             ),
