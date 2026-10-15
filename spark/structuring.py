@@ -26,8 +26,8 @@ def _in_structuring_band (amount:Column,reporting_threshold:float,band_fraction:
     return (amount >= F.lit(lower_bound)) & (amount < F.lit(reporting_threshold))
 
 #used as the main function for catching structuring behaviour
-def detet_structuring(transactions:DataFrame,reporting_threshold:float,band_fraction:float,min_transaction:int,window_duration:
-                       str,watermark_delay:str,slides_duration:Optional[str]= None)-> DataFrame:
+def detect_structuring(transactions:DataFrame,reporting_threshold:float,band_fraction:float,min_transaction:int,window_duration:str
+                       ,watermark_delay:str,slides_duration:Optional[str]= None)-> DataFrame:
 
     _validate_parameters(reporting_threshold,band_fraction,min_transaction)
 
