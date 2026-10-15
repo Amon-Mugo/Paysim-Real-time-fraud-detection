@@ -35,7 +35,7 @@ def _event_columns() -> list[Column]:
         #have  a temporary spark column we can cast dates event_time field
 
         if field.name == EVENT_TIME_FIELD:
-            column = F.expr(f"try_cast({_PARSED_COLUMN}.{field.name} as timestamp")#this converts the evnt_time into proper timestamp
+            column = F.expr(f"try_cast({_PARSED_COLUMN}.{field.name} as timestamp)")#this converts the evnt_time into proper timestamp
         
         columns.append(column.alias(field.name))
     return columns
