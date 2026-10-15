@@ -22,6 +22,8 @@ _DEFAULT_STRUCTURING_MIN_TRANSFERS = 3
 _DEFAULT_STRUCTURING_WINDOW_MINUTES = 120 #how many transfers in a specified amount of time
 
 _DEFAULT_GEO_MAX_SPEED_KMH = 500.0
+_DEFAULT_GEO_MIN_DISTANCE_KM = 1.0
+_DEFAULT_GEO_STATE_TTL_MINUTES = 60
 
 #flagging accounts making 10 or more transactions in a 10 mininute window
 _DEFAULT_VELOCITY_MIN_TRANSACTIONS = 10
@@ -48,6 +50,8 @@ class DetectionConfig:
     structuring_window:timedelta=timedelta(minutes=_DEFAULT_STRUCTURING_WINDOW_MINUTES)
 
     geo_max_speed_kmh:float=_DEFAULT_GEO_MAX_SPEED_KMH
+    geo_min_distance_km: float = _DEFAULT_GEO_MIN_DISTANCE_KM
+    geo_state_ttl: timedelta = timedelta(minutes=_DEFAULT_GEO_STATE_TTL_MINUTES)
     velocity_min_transactions:int=_DEFAULT_VELOCITY_MIN_TRANSACTIONS
     velocity_window:timedelta=timedelta(minutes=_DEFAULT_VELOCITY_WINDOW_MINUTES)
 
@@ -78,6 +82,10 @@ class DetectionConfig:
             raise ValueError("structuring_min_transfer must be at least 2")
         if self.geo_max_speed_kmh <= 0:
             raise ValueError("geo_max_speed must be positive")
+        if self.geo_min_distance_km < 0:
+            raise ValueError("geo_min_distance_km must not be negative")
+        if self.geo_state_ttl <= timedelta(0):
+            raise ValueError("geo_state_ttl must be positive")
         if self.velocity_min_transactions < 2:
             raise ValueError("velocity_min_transactions must be at least 2")
 
@@ -116,6 +124,19 @@ class DetectionConfig:
             geo_max_speed_kmh=float(
                 os.environ.get(
                     "DETECTION_GEO_MAX_SPEED_KMH", _DEFAULT_GEO_MAX_SPEED_KMH
+                )
+            ),
+            geo_min_distance_km=float(
+                os.environ.get(
+                    "DETECTION_GEO_MIN_DISTANCE_KM", _DEFAULT_GEO_MIN_DISTANCE_KM
+                )
+            ),
+            geo_state_ttl=timedelta(
+                minutes=int(
+                    os.environ.get(
+                        "DETECTION_GEO_STATE_TTL_MINUTES",
+                        _DEFAULT_GEO_STATE_TTL_MINUTES,
+                    )
                 )
             ),
             velocity_min_transactions=int(
