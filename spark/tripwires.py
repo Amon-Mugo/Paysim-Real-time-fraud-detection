@@ -12,7 +12,7 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-MONITORING_QUERY_NAME = "tripewire_monitor"
+MONITORING_QUERY_NAME = "tripwire_monitor"
 TRANSACTION_ID_FIELD = "transaction_id"  #primary column for uniqueness
 
 #used to track the watermark logs for every query and checks event parity 
@@ -41,8 +41,8 @@ class BatchParityLedger:
 
     
 #used to convert the pyspark time into proper python time
-def _parsed_progree_timestamp (value:str)-> datetime:
-    return datetime.fromisoformat(value.replace("Z","+00:000"))
+def _parse_progress_timestamp (value:str)-> datetime:
+    return datetime.fromisoformat(value.replace("Z","+00:00"))
 
 #used to count duplicates transaction_ids and count the exceeded rows
 def _count_duplicate_transaction_ids(batch: DataFrame) -> int:
@@ -79,7 +79,7 @@ def build_integrity_check(ledger:BatchParityLedger)-> Callable[[DataFrame,int],N
     
 #used as background monitoring agent that inheritts streamquery listerner that runs in the background and acts as an observer and does
 #not stop the pipeline is an error in adds a watermark for any logs created and even count parity check
-class TripewireListener (StreamingQueryListener):
+class TripwireListener (StreamingQueryListener):
     def __init__(self,ledger:BatchParityLedger)-> None:
         self._ledger = ledger #accepts the class
 
@@ -91,20 +91,20 @@ class TripewireListener (StreamingQueryListener):
             logger.warning("Triperwire event_count_parity: batch =%s no parsed_count recorded",batch_id,)
 
         elif parsed_rows != source_rows:
-            logger.warning("Tripewire event_count_parity:batch =%s source_rows=%s parsed_rows=%s",batch_id,source_rows,parsed_rows,)
+            logger.warning("Tripwire event_count_parity:batch =%s source_rows=%s parsed_rows=%s",batch_id,source_rows,parsed_rows,)
         else: 
-            logger.info("Tripewire event_count_parity batch= %s ok rows=%s",batch_id,source_rows)
+            logger.info("Tripwire event_count_parity batch=%s ok rows=%s",batch_id,source_rows)
 
     #used to add watermark lag for message delay and memory management
     def _log_watermark_delay ( self,query_name:str,batch_id:int,event_time:dict)-> None:
         max_event_time = event_time.get("max") #this is the time of the newest stream in the micro batch
         watermark = event_time.get("watermark")
 
-        if not max_event_time or not watermark: #the first micro batch must wait for the next micro batch to get watermark
+        if not max_event_time or not watermark or watermark.startswith("1970-01-01"): #the first micro batch must wait for the next micro batch to get watermark
             return
 
         lag_seconds = (
-            _parsed_progree_timestamp(max_event_time) - _parsed_progree_timestamp(watermark)
+            _parse_progress_timestamp(max_event_time) - _parse_progress_timestamp(watermark)
         ).total_seconds() #convert into seconds 
         logger.info(
             "Tripwire watermark_lag: query=%s batch=%s max_event_time=%s watermark=%s lag_seconds=%.0f",
