@@ -12,7 +12,7 @@ from spark.schema import parse_transactions #used in decrialisation of the json
 from spark.structuring import RULE_NAME as STRUCTURING_RULE_NAME #
 from spark.structuring import detect_structuring #used for catching structuring behavour for aml
 from spark.tripwires import (
-    MONITOR_QUERY_NAME,
+   MONITORING_QUERY_NAME ,
     BatchParityLedger,  #holds the actual initialisation and batch_id and row count and config rules
     TripwireListener, #background monitoring and the actual triperwires
     build_integrity_check, #checking anly duplicates
@@ -81,9 +81,9 @@ def _start_alerts_query(alerts: DataFrame, rule_name: str, config: DetectionConf
 #used in monitoring background data and for data interity and check any nulls
 def _start_tripewire_query(transactions:DataFrame,ledger:BatchParityLedger,config:DetectionConfig)->StreamingQuery:
     return(
-        transactions.writeStream.queryName(MONITOR_QUERY_NAME)
+        transactions.writeStream.queryName(MONITORING_QUERY_NAME )
         .foreachBatch(build_integrity_check(ledger))
-        .option("checkpointLocation",f"{config.checkpoint_location}/{MONITOR_QUERY_NAME}")
+        .option("checkpointLocation",f"{config.checkpoint_location}/{MONITORING_QUERY_NAME }")
         .trigger(processingTime=spark_interval(config.trigger_interval))
         .start()
     )
