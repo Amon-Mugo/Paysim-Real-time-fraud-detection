@@ -14,7 +14,7 @@ from spark.structuring import detect_structuring #used for catching structuring 
 from spark.tripwires import (
    MONITORING_QUERY_NAME ,
     BatchParityLedger,  #holds the actual initialisation and batch_id and row count and config rules
-    TripwireListener, #background monitoring and the actual triperwires
+    TripewireListener, #background monitoring and the actual triperwires
     build_integrity_check, #checking anly duplicates
 )
 from spark.velocity import RULE_NAME as VELOCITY_RULE_NAME
@@ -124,7 +124,7 @@ def start_detecion_queries (spark:SparkSession,config:DetectionConfig)-> List[St
         state_ttl_minutes=_geo_state_ttl_minutes(config),
     )
     ledger = BatchParityLedger() #used to log the batch id and the row counts of the tripewire
-    spark.streams.addListener(TripwireListener(ledger)) #used for background monitoring of the pipeline health
+    spark.streams.addListener(TripewireListener(ledger)) #used for background monitoring of the pipeline health
 
     return [
         _start_alerts_query(structuring_alerts,STRUCTURING_RULE_NAME,config),
