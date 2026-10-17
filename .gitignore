@@ -4,3 +4,6 @@ terraform/.terraform/
 terraform/*.tfstate
 terraform/*.tfstate.*
 data/ground_truth.jsonl
+
+# Terraform plan files
+*.tfplan
