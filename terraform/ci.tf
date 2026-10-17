@@ -75,6 +75,18 @@ data "aws_iam_policy_document" "ci_plan_permissions" {
     ]
     resources = [data.aws_dynamodb_table.terraform_locks.arn]
   }
+
+  statement {
+    sid    = "AllowStateLockFile"
+    effect = "Allow"
+    actions = [
+      "s3:PutObject",
+      "s3:DeleteObject",
+    ]
+    resources = [
+      "arn:aws:s3:::${var.tfstate_bucket_name}/terraform.tfstate.tflock",
+    ]
+  }
 }
 
 resource "aws_iam_role_policy" "ci_plan_permissions" {

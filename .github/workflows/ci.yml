@@ -65,6 +65,7 @@ jobs:
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
         with:
+          terraform_version: "1.16.6"
           terraform_wrapper: false
 
       - name: Terraform fmt check
@@ -79,8 +80,7 @@ jobs:
       - name: Terraform init
         run: |
           terraform -chdir=terraform init -input=false \
-            -backend-config="bucket=${{ vars.TFSTATE_BUCKET_NAME }}" \
-            -backend-config="dynamodb_table=${{ vars.TFSTATE_LOCK_TABLE_NAME }}"
+            -backend-config="bucket=${{ vars.TFSTATE_BUCKET_NAME }}"
 
       - name: Terraform validate
         run: terraform -chdir=terraform validate
