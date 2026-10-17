@@ -10,12 +10,13 @@ terraform {
 
   # Phase 2: uncomment after the backend-bootstrap resources exist, then run
   # `terraform init -migrate-state` with the -backend-config flags below.
-  # Partial configuration: bucket and dynamodb_table are supplied at init time.
+  # Partial configuration: the bucket is supplied at init time.
   #
   backend "s3" {
-    key     = "terraform.tfstate"
-    region  = "us-east-1"
-    encrypt = true
+    key          = "terraform.tfstate"
+    region       = "us-east-1"
+    encrypt      = true
+    use_lockfile = true
   }
 }
 
