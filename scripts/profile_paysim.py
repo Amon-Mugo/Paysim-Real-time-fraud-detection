@@ -43,7 +43,9 @@ def profile(df: pd.DataFrame) -> None:
     print_section("Fraud rate")
     fraud_count = int(df["isFraud"].sum())
     print(f"fraud rows: {fraud_count:,} ({fraud_count / len(df):.4%})")
-    print(f"flagged by source system (isFlaggedFraud): {int(df['isFlaggedFraud'].sum()):,}")
+    print(
+        f"flagged by source system (isFlaggedFraud): {int(df['isFlaggedFraud'].sum()):,}"
+    )
 
     print_section("Fraud by transaction type")
     by_type = df.groupby("type")["isFraud"].agg(fraud_count="sum", total="count")

@@ -1,5 +1,5 @@
 # used to process paysim dataset from streaming fraud-detection pipeline
-# used also to load transaction records from one raw to paysim csv file and transform them into ordered 
+# used also to load transaction records from one raw to paysim csv file and transform them into ordered
 # streams, plus added transaction id
 
 from __future__ import annotations
@@ -43,6 +43,7 @@ class PaySimRecord:
     new_balance_dest: float
     is_fraud: bool
 
+
 def read_paysim(settings: GeneratorConfig) -> Iterator[PaySimRecord]:
     sequence = 0
     previous_step = -1
@@ -57,22 +58,27 @@ def read_paysim(settings: GeneratorConfig) -> Iterator[PaySimRecord]:
             previous_step = step
 
             step_rows = list(rows)
-            step_start = settings.simulation_start + (step - 1) * PAYSIM_STEP_DURATION #gives paysim a proper datetime based on the steps
-            spacing = PAYSIM_STEP_DURATION / len(step_rows) #enables us to calculate message delay in oder to send message intervals
+            step_start = (
+                settings.simulation_start + (step - 1) * PAYSIM_STEP_DURATION
+            )  # gives paysim a proper datetime based on the steps
+            spacing = PAYSIM_STEP_DURATION / len(
+                step_rows
+            )  # enables us to calculate message delay in oder to send message intervals
 
             for position, row in enumerate(step_rows):
                 sequence += 1
                 yield _to_record(row, sequence, step, step_start + position * spacing)
 
 
-def _validate_header (fieldnames: Sequence[str]| None)-> None:
+def _validate_header(fieldnames: Sequence[str] | None) -> None:
     missing = REQUIRED_COLUMNS - set(fieldnames or ())
     if missing:
-        raise ValueError(f"PaySim CSV is missing columns")
+        raise ValueError("PaySim CSV is missing columns")
 
 
 def _to_record(
-    row: dict[str, str], sequence: int, step: int, event_time: datetime) -> PaySimRecord:
+    row: dict[str, str], sequence: int, step: int, event_time: datetime
+) -> PaySimRecord:
     return PaySimRecord(
         transaction_id=build_transaction_id(PAYSIM_ID_PREFIX, sequence),
         step=step,
@@ -87,9 +93,3 @@ def _to_record(
         new_balance_dest=float(row["newbalanceDest"]),
         is_fraud=bool(int(row["isFraud"])),
     )
-
-
-
-
-
-

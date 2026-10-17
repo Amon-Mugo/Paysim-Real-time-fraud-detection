@@ -1,25 +1,28 @@
-#used to determine the geogrphyical location of users based on the accountid and use 
-#sha256 used for cryptographic locationn
+# used to determine the geogrphyical location of users based on the accountid and use
+# sha256 used for cryptographic locationn
 
 from __future__ import annotations
 from dataclasses import dataclass
 import math
 import hashlib
 
-EARTH_RADIUS_KM = 6371.0088  #earth radius
-JITTER_DEGREES = 0.05   #maximusm shift
-COORDINATE_PRECISION = 5  #ROUND THE coordinates to 5 decimal placeses
+EARTH_RADIUS_KM = 6371.0088  # earth radius
+JITTER_DEGREES = 0.05  # maximusm shift
+COORDINATE_PRECISION = 5  # ROUND THE coordinates to 5 decimal placeses
 
-@dataclass(frozen= True)
+
+@dataclass(frozen=True)
 class Location:
     latitude: float
     longitude: float
+
 
 @dataclass(frozen=True)
 class City:
     name: str
     centre: Location
-    weight: int 
+    weight: int
+
 
 CITIES: tuple[City, ...] = (
     City("Nairobi", Location(-1.2921, 36.8219), 40),
@@ -38,10 +41,11 @@ CITIES: tuple[City, ...] = (
 
 _TOTAL_WEIGHT = sum(city.weight for city in CITIES)
 
-def home_location (account_id:str)-> Location:
-    digest= hashlib.sha256(account_id.encode("utf-8")).digest()
 
-    city = _pick_city(int.from_bytes(digest[0:8],"big")% _TOTAL_WEIGHT)
+def home_location(account_id: str) -> Location:
+    digest = hashlib.sha256(account_id.encode("utf-8")).digest()
+
+    city = _pick_city(int.from_bytes(digest[0:8], "big") % _TOTAL_WEIGHT)
 
     latitude_offset = _offset(digest[8:12])
     longitude_offset = _offset(digest[12:16])
@@ -50,6 +54,7 @@ def home_location (account_id:str)-> Location:
         latitude=round(city.centre.latitude + latitude_offset, COORDINATE_PRECISION),
         longitude=round(city.centre.longitude + longitude_offset, COORDINATE_PRECISION),
     )
+
 
 def haversine_km(first: Location, second: Location) -> float:
     """Return the great-circle distance between two locations in kilometres."""

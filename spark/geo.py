@@ -1,4 +1,4 @@
-#used in detecting fraudulant accounts based on user location
+# used in detecting fraudulant accounts based on user location
 
 from typing import Iterator, NamedTuple, Optional
 

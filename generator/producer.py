@@ -24,9 +24,13 @@ from generator.schema import Transaction, format_event_time
 
 LOG_INTERNAL_EVENTS = 100_000  # logs processes every 100000 messages
 MIN_SLEEP_SECONDS = 0.002  # 2 miliseconds sleep threshold
-QUEUE_FULL_POLL_SECONDS =  1.0  # wait time till messages buffer n/b flush out next messages (buffer= 1)
+QUEUE_FULL_POLL_SECONDS = (
+    1.0  # wait time till messages buffer n/b flush out next messages (buffer= 1)
+)
 
-FLUSH_TIMEOUT_SECONDS = 60.0  # maximum wait to flush messages remained at queue upon shutdown
+FLUSH_TIMEOUT_SECONDS = (
+    60.0  # maximum wait to flush messages remained at queue upon shutdown
+)
 MAX_LOGGED_DELIVERY_ERRORS = 5  # error messages capped at 5
 
 logger = logging.getLogger(__name__)
@@ -95,9 +99,7 @@ def create_producer(settings: GeneratorConfig) -> Producer:
             "bootstrap.servers": (
                 settings.kafka_bootstrap_servers
             ),  # for cluster connections and the address
-            "client.id": (
-                "paysim-generator"
-            ),  
+            "client.id": ("paysim-generator"),
             "acks": (
                 "all"
             ),  # tells kafka to use isr to ensure all messages are received before retuing success
@@ -131,7 +133,7 @@ def replay(
     published = 0  # messages sent
     labelled = 0  # groundtruth labels logged
     started = time.monotonic()
-    
+
     with GroundTruthWriter(settings.ground_truth_path) as ground_truth:
         try:
             for event in islice(merge_events(settings), max_events):
@@ -144,12 +146,10 @@ def replay(
                     event.event_time
                 )  # calculates the delay and sleep if neccessary
 
-              
                 _publish(
                     producer, settings.kafka_topic, event, tracker
                 )  # sends current transaction to kafka
 
-               
                 if event.label is not None:
                     ground_truth.write(event.label)
                     labelled += 1
@@ -163,9 +163,7 @@ def replay(
             undelivered = producer.flush(FLUSH_TIMEOUT_SECONDS)
 
     if undelivered:
-        raise RuntimeError(
-            f"{undelivered} messages were not delivered before timeout"
-        )
+        raise RuntimeError(f"{undelivered} messages were not delivered before timeout")
     if tracker.failed:
         raise RuntimeError(f"{tracker.failed} messages failed delivery")
 

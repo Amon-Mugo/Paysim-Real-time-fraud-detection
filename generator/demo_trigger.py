@@ -75,7 +75,9 @@ def _build_parser() -> argparse.ArgumentParser:
         choices=sorted(SCENARIO_FACTORIES),
         help="which scenario to fire",
     )
-    parser.add_argument("--bootstrap-servers", help="comma-separated Kafka bootstrap servers")
+    parser.add_argument(
+        "--bootstrap-servers", help="comma-separated Kafka bootstrap servers"
+    )
     parser.add_argument("--topic", help="Kafka topic to publish to")
     parser.add_argument(
         "--start",
@@ -122,9 +124,7 @@ def _resolve_settings(args: argparse.Namespace) -> GeneratorConfig:
     return replace(GeneratorConfig.from_env(), **provided)
 
 
-def _isolate_events(
-    events: list[InjectedEvent], run_id: str
-) -> list[InjectedEvent]:
+def _isolate_events(events: list[InjectedEvent], run_id: str) -> list[InjectedEvent]:
     """Give a scenario IDs and accounts that cannot collide with other streams.
 
     ScenarioBuilder numbers transactions and accounts from 1, which would clash

@@ -1,28 +1,35 @@
-#used to generate synthetic transactions and aslo geo anomalies and fraud scenarios 
+# used to generate synthetic transactions and aslo geo anomalies and fraud scenarios
 
 from __future__ import annotations
-from datetime import datetime,timedelta
+from datetime import datetime, timedelta
 from dataclasses import dataclass
 import itertools
 import random
-from generator.config import PAYSIM_STEP_COUNT,PAYSIM_STEP_DURATION,GeneratorConfig
+from generator.config import PAYSIM_STEP_COUNT, PAYSIM_STEP_DURATION, GeneratorConfig
 from generator.geo import (
-    CITIES,COORDINATE_PRECISION,
+    CITIES,
+    COORDINATE_PRECISION,
     JITTER_DEGREES,
-    Location,  haversine_km, home_location,
+    Location,
+    haversine_km,
+    home_location,
 )
 
-from generator.ground_truth import FraudPattern,GroundTruthEntry
-from generator.schema import INJECTED_ID_PREFIX, Transaction, build_transaction_id,format_event_time
+from generator.ground_truth import FraudPattern, GroundTruthEntry
+from generator.schema import (
+    INJECTED_ID_PREFIX,
+    Transaction,
+    build_transaction_id,
+    format_event_time,
+)
 
+ACCOUNT_PREFIX = "CINJ"  # injected account id perfix
+DESTINATION_BALANCE_MAX = 500_000.0  # maximum initila balance of a generated account randimly account openning
 
-ACCOUNT_PREFIX = "CINJ" #injected account id perfix
-DESTINATION_BALANCE_MAX = 500_000.0  #maximum initila balance of a generated account randimly account openning
-
-REPORTING_THRESHOLD = 1_000_000.0 #legal threshold for transfaring money
-STRUCTURING_MIN_FRACTION = 0.85 #lower legal threshold
-STRUCTURING_MAX_FRACTION = 0.99 #maximum perc threshold
-STRUCTURING_MIN_TRANSFERS = 6 
+REPORTING_THRESHOLD = 1_000_000.0  # legal threshold for transfaring money
+STRUCTURING_MIN_FRACTION = 0.85  # lower legal threshold
+STRUCTURING_MAX_FRACTION = 0.99  # maximum perc threshold
+STRUCTURING_MIN_TRANSFERS = 6
 STRUCTURING_MAX_TRANSFERS = 10
 STRUCTURING_MIN_GAP = timedelta(minutes=10)
 STRUCTURING_MAX_GAP = timedelta(minutes=40)
@@ -151,6 +158,7 @@ class ScenarioBuilder:
             balance = event.transaction.new_balance_orig
             events.append(event)
         return events
+
     def velocity(self, start: datetime) -> list[InjectedEvent]:
         """Build one velocity scenario beginning at `start`.
         One account fires a rapid burst of small cash-outs from its home
@@ -227,7 +235,9 @@ class ScenarioBuilder:
             if pattern is not None
             else None
         )
-        return InjectedEvent(transaction=transaction, event_time=event_time, label=label)
+        return InjectedEvent(
+            transaction=transaction, event_time=event_time, label=label
+        )
 
     def _new_account(self) -> str:
         return f"{ACCOUNT_PREFIX}{next(self._account_numbers):07d}"
@@ -247,7 +257,8 @@ class ScenarioBuilder:
         city = self._rng.choice(candidates)
         return Location(
             latitude=round(
-                city.centre.latitude + self._rng.uniform(-JITTER_DEGREES, JITTER_DEGREES),
+                city.centre.latitude
+                + self._rng.uniform(-JITTER_DEGREES, JITTER_DEGREES),
                 COORDINATE_PRECISION,
             ),
             longitude=round(
@@ -273,9 +284,13 @@ def plan_injections(settings: GeneratorConfig) -> list[InjectedEvent]:
 
     events: list[InjectedEvent] = []
     for _ in range(settings.structuring_scenarios):
-        events.extend(builder.structuring(_random_start(rng, window_start, latest_start)))
+        events.extend(
+            builder.structuring(_random_start(rng, window_start, latest_start))
+        )
     for _ in range(settings.geo_anomaly_scenarios):
-        events.extend(builder.geo_anomaly(_random_start(rng, window_start, latest_start)))
+        events.extend(
+            builder.geo_anomaly(_random_start(rng, window_start, latest_start))
+        )
     for _ in range(settings.velocity_scenarios):
         events.extend(builder.velocity(_random_start(rng, window_start, latest_start)))
 
@@ -284,4 +299,6 @@ def plan_injections(settings: GeneratorConfig) -> list[InjectedEvent]:
 
 
 def _random_start(rng: random.Random, earliest: datetime, latest: datetime) -> datetime:
-    return earliest + timedelta(seconds=rng.uniform(0, (latest - earliest).total_seconds()))
+    return earliest + timedelta(
+        seconds=rng.uniform(0, (latest - earliest).total_seconds())
+    )
