@@ -1,0 +1,5 @@
+requests
+boto3
+python-dotenv
+pandas<3
+pyarrow>=18.0.0
