@@ -1,7 +1,7 @@
-variable "github_repo" {
-  description = "GitHub repository (owner/name) allowed to assume the CI role"
+variable "github_oidc_sub_prefix" {
+  description = "OIDC sub-claim prefix of the repository allowed to assume the CI role"
   type        = string
-  default     = "Amon-Mugo/Paysim-Real-time-fraud-detection"
+  default     = "repo:Amon-Mugo@205969589/Paysim-Real-time-fraud-detection@1388086945"
 }
 
 data "aws_iam_openid_connect_provider" "github_actions" {
@@ -32,8 +32,8 @@ data "aws_iam_policy_document" "ci_plan_trust" {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
       values = [
-        "repo:${var.github_repo}:ref:refs/heads/main",
-        "repo:${var.github_repo}:pull_request",
+        "${var.github_oidc_sub_prefix}:ref:refs/heads/main",
+        "${var.github_oidc_sub_prefix}:pull_request",
       ]
     }
   }
