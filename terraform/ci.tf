@@ -8,10 +8,6 @@ data "aws_iam_openid_connect_provider" "github_actions" {
   url = "https://token.actions.githubusercontent.com"
 }
 
-data "aws_dynamodb_table" "terraform_locks" {
-  name = var.tfstate_lock_table_name
-}
-
 data "aws_iam_policy_document" "ci_plan_trust" {
   statement {
     effect  = "Allow"
@@ -63,17 +59,6 @@ data "aws_iam_policy_document" "ci_plan_permissions" {
       "arn:aws:s3:::${var.tfstate_bucket_name}",
       "arn:aws:s3:::${var.tfstate_bucket_name}/*",
     ]
-  }
-
-  statement {
-    sid    = "AllowStateLock"
-    effect = "Allow"
-    actions = [
-      "dynamodb:GetItem",
-      "dynamodb:PutItem",
-      "dynamodb:DeleteItem",
-    ]
-    resources = [data.aws_dynamodb_table.terraform_locks.arn]
   }
 
   statement {

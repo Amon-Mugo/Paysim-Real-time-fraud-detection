@@ -57,8 +57,3 @@ variable "tfstate_bucket_name" {
   type    = string
   default = "paysim-tfstate-amonmugo"
 }
-
-variable "tfstate_lock_table_name" {
-  type    = string
-  default = "paysim-tfstate-lock"
-}
