@@ -5,13 +5,17 @@ from typing import List
 from pyspark.sql.streaming import StreamingQuery
 import pyspark
 import logging
+from pathlib import Path
 from spark.config import (
     DetectionConfig,
     spark_interval,
 )  # used to import the conigaration and time conversion
 from spark.geo import RULE_NAME as GEO_RULE_NAME
 from spark.geo import detect_impossible_travel  # used to import detection logic
+from spark.model_loader import load_model
 from spark.schema import parse_transactions  # used in decrialisation of the json
+from spark.scoring import RULE_NAME as ML_RULE_NAME
+from spark.scoring import detect_ml_fraud
 from spark.structuring import RULE_NAME as STRUCTURING_RULE_NAME  #
 from spark.structuring import (
     detect_structuring,
@@ -152,6 +156,10 @@ def start_detecion_queries(
         watermark_delay=watermark_delay,
         state_ttl_minutes=_geo_state_ttl_minutes(config),
     )
+    # the model loads once at startup; a bad manifest or missing feature fails here
+    manifest, model = load_model(Path(config.model_dir))
+    logger.info("Loaded model %s", manifest.model_version)
+    ml_alerts = detect_ml_fraud(transactions, manifest, model)
     ledger = (
         BatchParityLedger()
     )  # used to log the batch id and the row counts of the tripwire
@@ -163,6 +171,7 @@ def start_detecion_queries(
         _start_alerts_query(structuring_alerts, STRUCTURING_RULE_NAME, config),
         _start_alerts_query(velocity_alerts, VELOCITY_RULE_NAME, config),
         _start_alerts_query(travel_alerts, GEO_RULE_NAME, config),
+        _start_alerts_query(ml_alerts, ML_RULE_NAME, config),
         _start_tripwire_query(transactions, ledger, config),
     ]
 
