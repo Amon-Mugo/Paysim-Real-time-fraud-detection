@@ -42,6 +42,7 @@ _DEFAULT_GEO_STATE_TTL_MINUTES = 60
 _DEFAULT_VELOCITY_MIN_TRANSACTIONS = 10
 _DEFAULT_VELOCITY_WINDOW_MINUTES = 10
 _DEFAULT_VELOCITY_SLIDE_MINUTES = 1  # step between overlapping velocity windows
+_DEFAULT_MODEL_DIR = str(PROJECT_ROOT / "data" / "models" / "fraud" / "stub-v1")
 
 
 # used to parse the date into proper time
@@ -73,6 +74,7 @@ class DetectionConfig:
     velocity_min_transactions: int = _DEFAULT_VELOCITY_MIN_TRANSACTIONS
     velocity_window: timedelta = timedelta(minutes=_DEFAULT_VELOCITY_WINDOW_MINUTES)
     velocity_slide: timedelta = timedelta(minutes=_DEFAULT_VELOCITY_SLIDE_MINUTES)
+    model_dir: str = _DEFAULT_MODEL_DIR
 
     # used for automatic validations of configurations not for the fraud rules implementations
     def __post_init__(self) -> None:
@@ -113,6 +115,8 @@ class DetectionConfig:
             raise ValueError("geo_min_distance_km must not be negative")
         if self.geo_state_ttl <= timedelta(0):
             raise ValueError("geo_state_ttl must be positive")
+        if not self.model_dir.strip():
+            raise ValueError("model_dir must not be empty")
         if self.velocity_min_transactions < 2:
             raise ValueError("velocity_min_transactions must be at least 2")
 
@@ -123,6 +127,7 @@ class DetectionConfig:
                 "KAFKA_BOOTSTRAP_SERVERS", _DEFAULT_KAFKA_BOOTSTRAP_SERVER
             ),
             kafka_topic=os.environ.get("KAFKA_TOPIC", _DEFAULT_KAFKA_TOPIC),
+            model_dir=os.environ.get("DETECTION_MODEL_DIR", _DEFAULT_MODEL_DIR),
             kafka_starting_offsets=os.environ.get(
                 "KAFKA_STARTING_OFFSETS", _DEFAULT_KAFKA_STARTING_OFFSETS
             ),
