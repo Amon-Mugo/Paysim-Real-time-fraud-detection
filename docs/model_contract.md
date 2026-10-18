@@ -55,7 +55,7 @@ Example:
   "model_version": "2026-10-20-01",
   "framework": "scikit-learn",
   "model_file": "model.joblib",
-  "feature_names": ["amount", "oldbalanceOrg", "newbalanceOrig"],
+  "feature_names": ["amount", "old_balance_orig", "new_balance_orig"],
   "alert_threshold": 0.8,
   "trained_at": "2026-10-20T09:30:00+00:00"
 }
@@ -75,6 +75,25 @@ Example:
 - Features that require per-account state, such as velocity counts, are
   produced by the rule layer in Spark. A model may use them only if the
   pipeline side agrees to expose them as columns.
+
+### Stream columns
+
+These are the columns the streaming job has available today. Feature names in
+the manifest must match them exactly.
+
+| Column             | Type   | Notes                                           |
+| ------------------ | ------ | ----------------------------------------------- |
+| `amount`           | double | Transaction amount.                             |
+| `old_balance_orig` | double | Origin account balance before the transaction.  |
+| `new_balance_orig` | double | Origin account balance after the transaction.   |
+| `old_balance_dest` | double | Destination balance before the transaction.     |
+| `new_balance_dest` | double | Destination balance after the transaction.      |
+| `latitude`         | double | Event location.                                 |
+| `longitude`        | double | Event location.                                 |
+| `transaction_type` | string | Categorical, for example `TRANSFER`. It needs encoding, so agree a derived numeric feature with the pipeline side before using it. |
+
+`transaction_id`, `event_time`, `name_orig` and `name_dest` are identifiers and
+timestamps, not features.
 
 ## Scoring interface
 
