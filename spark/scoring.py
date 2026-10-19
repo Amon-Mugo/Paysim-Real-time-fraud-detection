@@ -62,5 +62,5 @@ def detect_ml_fraud(
         "amount",
         SCORE_COLUMN,
         F.lit(manifest.model_version).alias("model_version"),
-        F.lit(RULE_NAME).alias("rule"),
+        F.lit(RULE_NAME).alias("rule_name"),
     )

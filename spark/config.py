@@ -43,6 +43,11 @@ _DEFAULT_VELOCITY_MIN_TRANSACTIONS = 10
 _DEFAULT_VELOCITY_WINDOW_MINUTES = 10
 _DEFAULT_VELOCITY_SLIDE_MINUTES = 1  # step between overlapping velocity windows
 _DEFAULT_MODEL_DIR = str(PROJECT_ROOT / "data" / "models" / "fraud" / "stub-v1")
+_DEFAULT_ICEBERG_CATALOG_NAME = "glue_catalog"
+_DEFAULT_ICEBERG_WAREHOUSE = str(PROJECT_ROOT / "data" / "iceberg" / "warehouse")
+_DEFAULT_ICEBERG_DATABASE = "fraud_detection"
+_DEFAULT_TRANSACTIONS_TABLE = "transactions"
+_DEFAULT_ALERTS_TABLE = "alerts"
 
 
 # used to parse the date into proper time
@@ -75,6 +80,11 @@ class DetectionConfig:
     velocity_window: timedelta = timedelta(minutes=_DEFAULT_VELOCITY_WINDOW_MINUTES)
     velocity_slide: timedelta = timedelta(minutes=_DEFAULT_VELOCITY_SLIDE_MINUTES)
     model_dir: str = _DEFAULT_MODEL_DIR
+    iceberg_catalog_name: str = _DEFAULT_ICEBERG_CATALOG_NAME
+    iceberg_warehouse: str = _DEFAULT_ICEBERG_WAREHOUSE
+    iceberg_database: str = _DEFAULT_ICEBERG_DATABASE
+    transactions_table: str = _DEFAULT_TRANSACTIONS_TABLE
+    alerts_table: str = _DEFAULT_ALERTS_TABLE
 
     # used for automatic validations of configurations not for the fraud rules implementations
     def __post_init__(self) -> None:
@@ -117,6 +127,18 @@ class DetectionConfig:
             raise ValueError("geo_state_ttl must be positive")
         if not self.model_dir.strip():
             raise ValueError("model_dir must not be empty")
+        if not self.iceberg_catalog_name.strip():
+            raise ValueError("iceberg_catalog_name must not be empty")
+        if not self.iceberg_warehouse.strip():
+            raise ValueError("iceberg_warehouse must not be empty")
+        if not self.iceberg_database.strip():
+            raise ValueError("iceberg_database must not be empty")
+        if not self.transactions_table.strip():
+            raise ValueError("transactions_table must not be empty")
+        if not self.alerts_table.strip():
+            raise ValueError("alerts_table must not be empty")
+        if self.transactions_table == self.alerts_table:
+            raise ValueError("transactions_table and alerts_table must differ")
         if self.velocity_min_transactions < 2:
             raise ValueError("velocity_min_transactions must be at least 2")
 
@@ -128,6 +150,19 @@ class DetectionConfig:
             ),
             kafka_topic=os.environ.get("KAFKA_TOPIC", _DEFAULT_KAFKA_TOPIC),
             model_dir=os.environ.get("DETECTION_MODEL_DIR", _DEFAULT_MODEL_DIR),
+            iceberg_catalog_name=os.environ.get(
+                "ICEBERG_CATALOG_NAME", _DEFAULT_ICEBERG_CATALOG_NAME
+            ),
+            iceberg_warehouse=os.environ.get(
+                "ICEBERG_WAREHOUSE", _DEFAULT_ICEBERG_WAREHOUSE
+            ),
+            iceberg_database=os.environ.get(
+                "ICEBERG_DATABASE", _DEFAULT_ICEBERG_DATABASE
+            ),
+            transactions_table=os.environ.get(
+                "TRANSACTIONS_TABLE", _DEFAULT_TRANSACTIONS_TABLE
+            ),
+            alerts_table=os.environ.get("ALERTS_TABLE", _DEFAULT_ALERTS_TABLE),
             kafka_starting_offsets=os.environ.get(
                 "KAFKA_STARTING_OFFSETS", _DEFAULT_KAFKA_STARTING_OFFSETS
             ),
