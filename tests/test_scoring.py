@@ -89,7 +89,7 @@ def test_alerts_carry_model_version_and_rule(
     alerts = detect_ml_fraud(_transactions(spark), manifest, model)
 
     assert {row["model_version"] for row in alerts.collect()} == {"v1"}
-    assert {row["rule"] for row in alerts.collect()} == {RULE_NAME}
+    assert {row["rule_name"] for row in alerts.collect()} == {RULE_NAME}
 
 
 def test_missing_feature_fails_when_the_query_is_built(
