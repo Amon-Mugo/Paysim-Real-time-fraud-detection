@@ -1,7 +1,7 @@
 
 resource "aws_emrserverless_application" "paysim_fraud_pipeline_emr" {
   name          = var.emr_application_name
-  release_label = "emr-7.10"
+  release_label = "emr-spark-8.0.0"
   type          = "Spark"
 
   image_configuration {
