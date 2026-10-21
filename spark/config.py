@@ -44,6 +44,8 @@ _DEFAULT_VELOCITY_WINDOW_MINUTES = 10
 _DEFAULT_VELOCITY_SLIDE_MINUTES = 1  # step between overlapping velocity windows
 _DEFAULT_MODEL_DIR = str(PROJECT_ROOT / "data" / "models" / "fraud" / "stub-v1")
 _DEFAULT_ICEBERG_CATALOG_NAME = "glue_catalog"
+_DEFAULT_ICEBERG_CATALOG_TYPE = "hadoop"
+_ICEBERG_CATALOG_TYPES = ("hadoop", "glue")
 _DEFAULT_ICEBERG_WAREHOUSE = str(PROJECT_ROOT / "data" / "iceberg" / "warehouse")
 _DEFAULT_ICEBERG_DATABASE = "fraud_detection"
 _DEFAULT_TRANSACTIONS_TABLE = "transactions"
@@ -81,6 +83,7 @@ class DetectionConfig:
     velocity_slide: timedelta = timedelta(minutes=_DEFAULT_VELOCITY_SLIDE_MINUTES)
     model_dir: str = _DEFAULT_MODEL_DIR
     iceberg_catalog_name: str = _DEFAULT_ICEBERG_CATALOG_NAME
+    iceberg_catalog_type: str = _DEFAULT_ICEBERG_CATALOG_TYPE
     iceberg_warehouse: str = _DEFAULT_ICEBERG_WAREHOUSE
     iceberg_database: str = _DEFAULT_ICEBERG_DATABASE
     transactions_table: str = _DEFAULT_TRANSACTIONS_TABLE
@@ -129,6 +132,8 @@ class DetectionConfig:
             raise ValueError("model_dir must not be empty")
         if not self.iceberg_catalog_name.strip():
             raise ValueError("iceberg_catalog_name must not be empty")
+        if self.iceberg_catalog_type not in _ICEBERG_CATALOG_TYPES:
+            raise ValueError("iceberg_catalog_type must be one of hadoop, glue")
         if not self.iceberg_warehouse.strip():
             raise ValueError("iceberg_warehouse must not be empty")
         if not self.iceberg_database.strip():
@@ -152,6 +157,9 @@ class DetectionConfig:
             model_dir=os.environ.get("DETECTION_MODEL_DIR", _DEFAULT_MODEL_DIR),
             iceberg_catalog_name=os.environ.get(
                 "ICEBERG_CATALOG_NAME", _DEFAULT_ICEBERG_CATALOG_NAME
+            ),
+            iceberg_catalog_type=os.environ.get(
+                "ICEBERG_CATALOG_TYPE", _DEFAULT_ICEBERG_CATALOG_TYPE
             ),
             iceberg_warehouse=os.environ.get(
                 "ICEBERG_WAREHOUSE", _DEFAULT_ICEBERG_WAREHOUSE
