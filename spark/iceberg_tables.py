@@ -36,7 +36,7 @@ _KAFKA_COLUMNS = (
 # used to validate sql sytanxes
 def _validated_identifiers(name: str) -> str:
     if not _IDENTIFIER_PATTERN.match(name):
-        raise ValueError(f"Invalid Iceberg Identifier {name!r}")
+        raise ValueError(f"Invalid Iceberg identifier {name!r}")
     return name
 
 
