@@ -34,7 +34,7 @@ _KAFKA_COLUMNS = (
 
 
 # used to validate sql sytanxes
-def _validated_identifiers(name: str) -> str:
+def validated_identifiers(name: str) -> str:
     if not _IDENTIFIER_PATTERN.match(name):
         raise ValueError(f"Invalid Iceberg identifier {name!r}")
     return name
@@ -43,7 +43,7 @@ def _validated_identifiers(name: str) -> str:
 # used to enable apache iceberg to query different sql functions and database names
 def _qualified_name(config: DetectionConfig, *parts: str) -> str:
     names = [config.iceberg_catalog_name, config.iceberg_database, *parts]
-    return ".".join(_validated_identifiers(name) for name in names)
+    return ".".join(validated_identifiers(name) for name in names)
 
 
 # used  to translate the StructType defined earlier into proper sql compatible column definations
