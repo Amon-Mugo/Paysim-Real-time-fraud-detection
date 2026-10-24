@@ -106,7 +106,15 @@ def _structuring_batch(spark: SparkSession) -> DataFrame:
 
 
 def _velocity_batch(spark: SparkSession) -> DataFrame:
-    row = (VELOCITY_RULE_NAME, ACCOUNT, WINDOW_START, WINDOW_END, 2, 300.0, ["t1", "t2"])
+    row = (
+        VELOCITY_RULE_NAME,
+        ACCOUNT,
+        WINDOW_START,
+        WINDOW_END,
+        2,
+        300.0,
+        ["t1", "t2"],
+    )
     return spark.createDataFrame([row], schema=_VELOCITY_SCHEMA)
 
 
@@ -152,7 +160,9 @@ _RULE_CASES = [
 ]
 
 _START_CASES = [
-    pytest.param(start_structuring_landing_query, STRUCTURING_RULE_NAME, id="structuring"),
+    pytest.param(
+        start_structuring_landing_query, STRUCTURING_RULE_NAME, id="structuring"
+    ),
     pytest.param(start_velocity_landing_query, VELOCITY_RULE_NAME, id="velocity"),
     pytest.param(start_geo_landing_query, GEO_RULE_NAME, id="geo"),
 ]
@@ -282,19 +292,19 @@ def test_start_query_wires_name_mode_checkpoint_and_writer(start_query, rule_nam
     alerts = MagicMock()
     config = DetectionConfig()
     query_name = landing_query_name(rule_name)
-    expected = (
-        alerts.writeStream.queryName.return_value.outputMode.return_value.foreachBatch.return_value.option.return_value.trigger.return_value.start.return_value
-    )
+
+    named = alerts.writeStream.queryName
+    mode = named.return_value.outputMode
+    batch_sink = mode.return_value.foreachBatch
+    option = batch_sink.return_value.option
+    expected = option.return_value.trigger.return_value.start.return_value
 
     started = start_query(alerts, config)
 
-    named = alerts.writeStream.queryName
     named.assert_called_once_with(query_name)
-    mode = named.return_value.outputMode
     mode.assert_called_once_with("append")
-    batch_sink = mode.return_value.foreachBatch
     assert callable(batch_sink.call_args[0][0])
-    batch_sink.return_value.option.assert_called_once_with(
+    option.assert_called_once_with(
         "checkpointLocation", f"{config.checkpoint_location}/{query_name}"
     )
     assert started is expected
