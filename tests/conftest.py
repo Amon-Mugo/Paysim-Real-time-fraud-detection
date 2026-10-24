@@ -2,10 +2,30 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Iterator
 
 import pytest
 from pyspark.sql import SparkSession
+
+from spark.config import DetectionConfig
+from spark.iceberg_session import iceberg_packages
+
+
+def _configure_jvm_packages() -> None:
+    """Add the Iceberg runtime to the arguments the Spark JVM launches with.
+
+    Spark reads ``--packages`` only when the JVM starts, and every later
+    session in the pytest process reuses that JVM. Setting it here, before any
+    test module runs, makes the Iceberg classes available to all sessions.
+    """
+    packages = ",".join(
+        iceberg_packages(DetectionConfig(iceberg_catalog_type="hadoop"))
+    )
+    os.environ["PYSPARK_SUBMIT_ARGS"] = f"--packages {packages} pyspark-shell"
+
+
+_configure_jvm_packages()
 
 
 @pytest.fixture(scope="module")
