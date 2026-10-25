@@ -16,6 +16,7 @@ from spark.iceberg_tables import (
     _qualified_name,
     transactions_schema,
 )
+from spark.landing_parity import check_landing_parity
 from spark.model_contract import ModelManifest
 from spark.scoring import RULE_NAME as ML_RULE_NAME
 from spark.scoring import SCORE_COLUMN
@@ -52,7 +53,10 @@ def build_transactions_writer(
         rows = _transaction_row(batch, manifest).persist()
         try:
             merge_batch(rows, transaction_tables, TRANSACTION_KEY)
-            merge_batch(_ml_alert_rows(rows, manifest), alert_tables, ALERT_KEY)
+            check_landing_parity(rows, transaction_tables, TRANSACTION_KEY, batch_id)
+            ml_alerts = _ml_alert_rows(rows, manifest)
+            merge_batch(ml_alerts, alert_tables, ALERT_KEY)
+            check_landing_parity(ml_alerts, alert_tables, ALERT_KEY, batch_id)
         finally:
             rows.unpersist()
 

@@ -6,17 +6,22 @@ from pyspark.sql.streaming import StreamingQuery
 import pyspark
 import logging
 from pathlib import Path
+from spark.alert_landing import (
+    start_geo_landing_query,
+    start_structuring_landing_query,
+    start_velocity_landing_query,
+)
 from spark.config import (
     DetectionConfig,
     spark_interval,
 )  # used to import the conigaration and time conversion
-from spark.geo import RULE_NAME as GEO_RULE_NAME
 from spark.geo import detect_impossible_travel  # used to import detection logic
+from spark.iceberg_session import iceberg_packages, iceberg_spark_conf
+from spark.iceberg_tables import create_landing_tables
+from spark.landing import start_transactions_landing_query
 from spark.model_loader import load_model
 from spark.schema import parse_transactions  # used in decrialisation of the json
-from spark.scoring import RULE_NAME as ML_RULE_NAME
-from spark.scoring import detect_ml_fraud
-from spark.structuring import RULE_NAME as STRUCTURING_RULE_NAME  #
+from spark.scoring import score_transactions
 from spark.structuring import (
     detect_structuring,
 )  # used for catching structuring behavour for aml
@@ -26,7 +31,6 @@ from spark.tripwires import (
     TripwireListener,  # background monitoring and the actual triperwires
     build_integrity_check,  # checking anly duplicates
 )
-from spark.velocity import RULE_NAME as VELOCITY_RULE_NAME
 from spark.velocity import (
     detect_velocity,
 )  # any detections of accounts with suspisous behaviour
@@ -63,12 +67,18 @@ def _geo_state_ttl_minutes(config: DetectionConfig) -> int:
 
 
 # set up spark engine and kafka connection
-def build_spark_session(app_name: str = APP_NAME) -> SparkSession:
+def build_spark_session(
+    config: DetectionConfig, app_name: str = APP_NAME
+) -> SparkSession:
     return (
         SparkSession.builder.appName(app_name)
-        .config("spark.jars.packages", _kafka_package())
+        .config(
+            "spark.jars.packages",
+            ",".join([_kafka_package(), *iceberg_packages(config)]),
+        )
         .config("spark.sql.session.timeZone", SESSION_TIME_ZONE)
         .config("spark.sql.shuffle.partitions", str(LOCAL_SHUFFLE_PARTITION))
+        .config(map=iceberg_spark_conf(config))
         .getOrCreate()
     )
 
@@ -84,21 +94,6 @@ def _read_transactions(spark: SparkSession, config: DetectionConfig) -> DataFram
         .load()
     )
     return parse_transactions(raw_events)
-
-
-# used to set up strea detecting finacial alerts configure how and when they should be outputted
-def _start_alerts_query(
-    alerts: DataFrame, rule_name: str, config: DetectionConfig
-) -> StreamingQuery:
-    return (
-        alerts.writeStream.queryName(rule_name)
-        .outputMode("append")
-        .format("console")
-        .option("truncate", "false")
-        .option("checkpointLocation", f"{config.checkpoint_location}/{rule_name}")
-        .trigger(processingTime=spark_interval(config.trigger_interval))
-        .start()
-    )
 
 
 # used in monitoring background data and for data interity and check any nulls
@@ -125,6 +120,7 @@ def start_detecion_queries(
     watermark_delay = spark_interval(config.watermark_delay)
     # used to get proper watermark delay and tells saprk how long to wait
 
+    create_landing_tables(spark, config)
     transactions = _read_transactions(spark, config)
     # used to connect kafka,load byte streams and parased into structured dataframe
 
@@ -159,7 +155,7 @@ def start_detecion_queries(
     # the model loads once at startup; a bad manifest or missing feature fails here
     manifest, model = load_model(Path(config.model_dir))
     logger.info("Loaded model %s", manifest.model_version)
-    ml_alerts = detect_ml_fraud(transactions, manifest, model)
+    scored_transactions = score_transactions(transactions, manifest, model)
     ledger = (
         BatchParityLedger()
     )  # used to log the batch id and the row counts of the tripwire
@@ -168,10 +164,10 @@ def start_detecion_queries(
     )  # used for background monitoring of the pipeline health
 
     return [
-        _start_alerts_query(structuring_alerts, STRUCTURING_RULE_NAME, config),
-        _start_alerts_query(velocity_alerts, VELOCITY_RULE_NAME, config),
-        _start_alerts_query(travel_alerts, GEO_RULE_NAME, config),
-        _start_alerts_query(ml_alerts, ML_RULE_NAME, config),
+        start_structuring_landing_query(structuring_alerts, config),
+        start_velocity_landing_query(velocity_alerts, config),
+        start_geo_landing_query(travel_alerts, config),
+        start_transactions_landing_query(scored_transactions, manifest, config),
         _start_tripwire_query(transactions, ledger, config),
     ]
 
@@ -181,7 +177,7 @@ def main() -> None:
     _configure_logging()
     config = DetectionConfig.from_env()
     logger.info("Starting detection jobs: %s", config)
-    spark = build_spark_session()
+    spark = build_spark_session(config)
     start_detecion_queries(spark, config)
     spark.streams.awaitAnyTermination()
 
