@@ -1,0 +1,17 @@
+.git
+.github
+venv
+data
+terraform
+tests
+spark
+docs
+scripts
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.terraform
+*.tfstate
+*.tfstate.*
+*.tfplan
+.env
