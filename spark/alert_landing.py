@@ -15,6 +15,7 @@ from spark.geo import RULE_NAME as GEO_RULE_NAME
 from spark.iceberg_merge import BatchWrite, merge_batch
 from spark.iceberg_tables import _qualified_name
 from spark.landing import ALERT_KEY
+from spark.landing_parity import check_landing_parity
 from spark.structuring import RULE_NAME as STRUCTURING_RULE_NAME
 from spark.velocity import RULE_NAME as VELOCITY_RULE_NAME
 
@@ -36,7 +37,9 @@ def build_alerts_writer(
     alert_table = _qualified_name(config, config.alerts_table)
 
     def write_batch(batch: DataFrame, batch_id: int) -> None:
-        merge_batch(normalize(batch), alert_table, ALERT_KEY)
+        alerts = normalize(batch)
+        merge_batch(alerts, alert_table, ALERT_KEY)
+        check_landing_parity(alerts, alert_table, ALERT_KEY, batch_id)
 
     return write_batch
 
