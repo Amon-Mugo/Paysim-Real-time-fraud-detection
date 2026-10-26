@@ -19,6 +19,7 @@ _DEFAULT_RANDOM_SEED = 42
 _DEFAULT_STRUCTURING_SCENARIOS = 50
 _DEFAULT_GEO_ANOMALY_SCENARIOS = 50
 _DEFAULT_VELOCITY_SCENARIOS = 50
+_DEFAULT_MIN_STEP = 1  # for ml purpose
 
 
 @dataclass(frozen=True)
@@ -33,6 +34,7 @@ class GeneratorConfig:
     structuring_scenarios: int = _DEFAULT_STRUCTURING_SCENARIOS
     geo_anomaly_scenarios: int = _DEFAULT_GEO_ANOMALY_SCENARIOS
     velocity_scenarios: int = _DEFAULT_VELOCITY_SCENARIOS
+    min_step: int = _DEFAULT_MIN_STEP  # for ml purpose
 
     def __post_init__(self) -> None:
 
@@ -52,6 +54,14 @@ class GeneratorConfig:
             or self.velocity_scenarios < 0
         ):
             raise ValueError("scenario counts must not be negative")
+
+        if not 1 <= self.min_step <= PAYSIM_STEP_COUNT:
+            raise ValueError(f"min_step must be between 1 and {PAYSIM_STEP_COUNT}")
+
+    @property
+    def replay_start(self) -> datetime:
+        # for ml puprose
+        return self.simulation_start + (self.min_step - 1) * PAYSIM_STEP_DURATION
 
     @classmethod
     def from_env(cls) -> GeneratorConfig:
