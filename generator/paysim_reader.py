@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from itertools import groupby
 from generator.config import PAYSIM_STEP_DURATION, GeneratorConfig
+from generator.csv_source import open_csv
 from generator.schema import PAYSIM_ID_PREFIX, build_transaction_id
 
 REQUIRED_COLUMNS = frozenset(
@@ -48,7 +49,7 @@ def read_paysim(settings: GeneratorConfig) -> Iterator[PaySimRecord]:
     sequence = 0
     previous_step = -1
 
-    with settings.csv_path.open(newline="", encoding="utf-8") as handle:
+    with open_csv(settings) as handle:
         reader = csv.DictReader(handle)
         _validate_header(reader.fieldnames)
 

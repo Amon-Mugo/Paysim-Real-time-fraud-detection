@@ -8,6 +8,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 PAYSIM_STEP_DURATION = timedelta(hours=1)
 PAYSIM_STEP_COUNT = 743  # steps 1-743, so the replay window is 743 hours
+S3_URI_PREFIX = "s3://"  # used to specify the s3 bucket path used
 
 _DEFAULT_CSV_PATH = PROJECT_ROOT / "data" / "paysim dataset.csv"
 _DEFAULT_GROUND_TRUTH_PATH = PROJECT_ROOT / "data" / "ground_truth.jsonl"
@@ -20,6 +21,7 @@ _DEFAULT_STRUCTURING_SCENARIOS = 50
 _DEFAULT_GEO_ANOMALY_SCENARIOS = 50
 _DEFAULT_VELOCITY_SCENARIOS = 50
 _DEFAULT_MIN_STEP = 1  # for ml purpose
+_DEFAULT_CSV_S3_URI = ""
 
 
 @dataclass(frozen=True)
@@ -35,6 +37,7 @@ class GeneratorConfig:
     geo_anomaly_scenarios: int = _DEFAULT_GEO_ANOMALY_SCENARIOS
     velocity_scenarios: int = _DEFAULT_VELOCITY_SCENARIOS
     min_step: int = _DEFAULT_MIN_STEP  # for ml purpose
+    csv_s3_uri: str = _DEFAULT_CSV_S3_URI
 
     def __post_init__(self) -> None:
 
@@ -57,6 +60,9 @@ class GeneratorConfig:
 
         if not 1 <= self.min_step <= PAYSIM_STEP_COUNT:
             raise ValueError(f"min_step must be between 1 and {PAYSIM_STEP_COUNT}")
+
+        if self.csv_s3_uri and not self.csv_s3_uri.startswith(S3_URI_PREFIX):
+            raise ValueError(f"csv_s3_uri must start with {S3_URI_PREFIX}")
 
     @property
     def replay_start(self) -> datetime:
@@ -109,6 +115,8 @@ class GeneratorConfig:
                     "GENERATOR_VELOCITY_SCENARIOS", _DEFAULT_VELOCITY_SCENARIOS
                 )
             ),
+            min_step=int(os.environ.get("GENERATOR_MIN_STEP", _DEFAULT_MIN_STEP)),
+            csv_s3_uri=os.environ.get("GENERATOR_CSV_S3_URI", _DEFAULT_CSV_S3_URI),
         )
 
 
