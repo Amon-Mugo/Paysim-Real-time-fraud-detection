@@ -87,3 +87,16 @@ jobs:
 
       - name: Terraform plan
         run: terraform -chdir=terraform plan -input=false -no-color
+
+  hadolint:
+    name: Hadolint
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Lint generator Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: docker/generator/Dockerfile
+          failure-threshold: warning
