@@ -277,10 +277,16 @@ def plan_injections(settings: GeneratorConfig) -> list[InjectedEvent]:
     """
     rng = random.Random(settings.random_seed)
     builder = ScenarioBuilder(rng)
-
-    window_start = settings.simulation_start
-    window_end = window_start + PAYSIM_STEP_COUNT * PAYSIM_STEP_DURATION
+    # for ml purpose
+    window_start = settings.replay_start
+    window_end = settings.simulation_start + PAYSIM_STEP_COUNT * PAYSIM_STEP_DURATION
     latest_start = window_end - MAX_SCENARIO_SPAN
+    if latest_start < window_start and (
+        settings.structuring_scenarios
+        + settings.geo_anomaly_scenarios
+        + settings.velocity_scenarios
+    ):
+        raise ValueError("min_step is too late to fit the injected scenarios")
 
     events: list[InjectedEvent] = []
     for _ in range(settings.structuring_scenarios):

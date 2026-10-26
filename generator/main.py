@@ -85,6 +85,12 @@ def _build_parser() -> argparse.ArgumentParser:
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
         help="logging verbosity (default: INFO)",
     )
+    # ml purpose of line 88 and 93
+    parser.add_argument(
+        "--min-step",
+        type=_positive_int,
+        help="first PaySim step to replay (1-743); earlier steps are skipped",
+    )
     return parser
 
 
@@ -102,6 +108,7 @@ def _reslove_settings(args: argparse.Namespace) -> GeneratorConfig:
         "structuring_scenarios": args.structuring_scenarios,
         "geo_anomaly_scenarios": args.geo_anomaly_scenarios,
         "velocity_scenarios": args.velocity_scenarios,
+        "min_step": args.min_step,  # for ml pupose
     }
     provided = {name: value for name, value in override.items() if value is not None}
 
@@ -147,6 +154,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     except (
         RuntimeError,
         OSError,
+        ValueError,
     ) as error:  # catch kafka error and network flactuations
         logger.error("Replay failed : %s", error)
         return EXIT_REPLAY_FAILED

@@ -58,6 +58,10 @@ def read_paysim(settings: GeneratorConfig) -> Iterator[PaySimRecord]:
             previous_step = step
 
             step_rows = list(rows)
+            # from line 61 and 64 s for ml purpose
+            if step < settings.min_step:
+                sequence += len(step_rows)  # keep IDs identical to a full run
+                continue
             step_start = (
                 settings.simulation_start + (step - 1) * PAYSIM_STEP_DURATION
             )  # gives paysim a proper datetime based on the steps
