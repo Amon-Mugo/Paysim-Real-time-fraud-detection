@@ -52,6 +52,10 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--topic", help="kafka topic to publish to")
     parser.add_argument(
+        "--ground-truth-s3-uri",
+        help="s3://bucket/key to upload the ground truth file to",
+    )
+    parser.add_argument(
         "--simulation-start",
         type=_parse_start,
         help="ISO-8601 instant that paysim step 1 maps to",
@@ -109,6 +113,7 @@ def _reslove_settings(args: argparse.Namespace) -> GeneratorConfig:
         "simulation_start": args.simulation_start,
         "replay_speedup": args.speedup,
         "ground_truth_path": args.ground_truth_path,
+        "ground_truth_s3_uri": args.ground_truth_s3_uri,
         "random_seed": args.seed,
         "structuring_scenarios": args.structuring_scenarios,
         "geo_anomaly_scenarios": args.geo_anomaly_scenarios,
