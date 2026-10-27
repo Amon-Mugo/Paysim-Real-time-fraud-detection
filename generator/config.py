@@ -24,6 +24,7 @@ _DEFAULT_MIN_STEP = 1  # for ml purpose
 _DEFAULT_CSV_S3_URI = ""
 _DEFAULT_KAFKA_IAM_AUTH = False
 _DEFAULT_AWS_REGION = ""
+_DEFAULT_GROUND_TRUTH_S3_URI = ""
 
 
 def _env_flag(name: str, default: bool) -> bool:
@@ -49,6 +50,7 @@ class GeneratorConfig:
     csv_s3_uri: str = _DEFAULT_CSV_S3_URI
     kafka_iam_auth: bool = _DEFAULT_KAFKA_IAM_AUTH
     aws_region: str = _DEFAULT_AWS_REGION
+    ground_truth_s3_uri: str = _DEFAULT_GROUND_TRUTH_S3_URI
 
     def __post_init__(self) -> None:
 
@@ -77,6 +79,11 @@ class GeneratorConfig:
 
         if self.kafka_iam_auth and not self.aws_region.strip():
             raise ValueError("aws_region must be set when kafka_iam_auth is enabled")
+
+        if self.ground_truth_s3_uri and not self.ground_truth_s3_uri.startswith(
+            S3_URI_PREFIX
+        ):
+            raise ValueError(f"ground_truth_s3_uri must start with {S3_URI_PREFIX}")
 
     @property
     def replay_start(self) -> datetime:
@@ -133,6 +140,9 @@ class GeneratorConfig:
             csv_s3_uri=os.environ.get("GENERATOR_CSV_S3_URI", _DEFAULT_CSV_S3_URI),
             kafka_iam_auth=_env_flag("KAFKA_IAM_AUTH", _DEFAULT_KAFKA_IAM_AUTH),
             aws_region=os.environ.get("AWS_REGION", _DEFAULT_AWS_REGION),
+            ground_truth_s3_uri=os.environ.get(
+                "GENERATOR_GROUND_TRUTH_S3_URI", _DEFAULT_GROUND_TRUTH_S3_URI
+            ),
         )
 
 

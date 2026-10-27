@@ -22,6 +22,7 @@ from generator.ground_truth import FraudPattern, GroundTruthEntry, GroundTruthWr
 from generator.injectors import plan_injections
 from generator.paysim_reader import PaySimRecord, read_paysim
 from generator.schema import Transaction, format_event_time
+from generator.s3_upload import upload_file
 
 LOG_INTERNAL_EVENTS = 100_000  # logs processes every 100000 messages
 MIN_SLEEP_SECONDS = 0.002  # 2 miliseconds sleep threshold
@@ -189,6 +190,9 @@ def replay(
 
         finally:
             undelivered = producer.flush(FLUSH_TIMEOUT_SECONDS)
+
+    if settings.ground_truth_s3_uri:
+        upload_file(settings.ground_truth_path, settings.ground_truth_s3_uri)
 
     if undelivered:
         raise RuntimeError(f"{undelivered} messages were not delivered before timeout")
