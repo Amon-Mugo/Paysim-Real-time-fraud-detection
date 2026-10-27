@@ -4,3 +4,4 @@ pyspark==4.0.2
 flake8==7.4.1
 black==26.10.1
 confluent-kafka==2.16.0
+aws-msk-iam-sasl-signer-python==1.0.2
