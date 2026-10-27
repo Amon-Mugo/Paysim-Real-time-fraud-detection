@@ -43,6 +43,10 @@ def _build_parser() -> argparse.ArgumentParser:
         description="Replay Paysim with injected fraud scenario into kafka",
     )
     parser.add_argument("--csv-path", type=Path, help="Paysim CSV to replay")
+    # added due to the purpose of the csv_source.py file
+    parser.add_argument(
+        "--csv-s3-uri", help="s3://bucket/key of the Paysim CSV (overrides --csv-path)"
+    )
     parser.add_argument(
         "--bootstrap-servers", help="comma-separated kafka bootstrap severs"
     )
@@ -99,6 +103,7 @@ def _reslove_settings(args: argparse.Namespace) -> GeneratorConfig:
     # argnparse.Namespace will hold the parsed values provided
     override = {
         "csv_path": args.csv_path,
+        "csv_s3_uri": args.csv_s3_uri,  # pupose of the csv_source.py
         "kafka_bootstrap_servers": args.bootstrap_servers,
         "kafka_topic": args.topic,
         "simulation_start": args.simulation_start,
@@ -140,7 +145,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     logger.info(
         "Replaying to %s to topic '%s' on %s at %sx speed",
-        settings.csv_path,
+        settings.csv_s3_uri
+        or settings.csv_path,  # due to the purpose of the csv_source path
         settings.kafka_topic,
         settings.kafka_bootstrap_servers,
         settings.replay_speedup,
