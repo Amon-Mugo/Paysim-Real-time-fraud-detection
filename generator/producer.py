@@ -7,12 +7,13 @@ from __future__ import annotations
 import heapq
 import logging
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from datetime import datetime
 from itertools import islice
-from typing import Protocol
+from typing import Any, Protocol
 
+from aws_msk_iam_sasl_signer import MSKAuthTokenProvider
 from confluent_kafka import KafkaError, Message, Producer
 
 from generator.config import GeneratorConfig
@@ -92,22 +93,49 @@ class _Pacer:
             time.sleep(delay)
 
 
+# used to fetch a short-lived MSK IAM token each time kafka asks for credentials
+def _build_oauth_callback(region: str) -> Callable[[str], tuple[str, float]]:
+    def _oauth_callback(_oauth_config: str) -> tuple[str, float]:
+        token, expiry_ms = MSKAuthTokenProvider.generate_auth_token(region)
+        return (
+            token,
+            expiry_ms / 1000,
+        )  # kafka expects seconds, the signer gives milliseconds
+
+    return _oauth_callback
+
+
 # used in creating a producer to ensure reliability and performance settings
+def _build_producer_config(settings: GeneratorConfig) -> dict[str, Any]:
+    producer_config: dict[str, Any] = {
+        "bootstrap.servers": (
+            settings.kafka_bootstrap_servers
+        ),  # for cluster connections and the address
+        "client.id": ("paysim-generator"),
+        "acks": (
+            "all"
+        ),  # tells kafka to use isr to ensure all messages are received before retuing success
+        "enable.idempotence": True,  # sequence the messages in order
+        "compression.type": "lz4",  # compression algorithms
+        "linger.ms": 5,  # waith 5 miliseconds before sending another message
+    }
+    if settings.kafka_iam_auth:
+        producer_config.update(
+            {
+                "security.protocol": "SASL_SSL",
+                "sasl.mechanism": "OAUTHBEARER",
+                "oauth_cb": _build_oauth_callback(settings.aws_region),
+            }
+        )
+    return producer_config
+
+
+# used in creating the producer, fetching the first token up front when MSK IAM is on
 def create_producer(settings: GeneratorConfig) -> Producer:
-    return Producer(
-        {
-            "bootstrap.servers": (
-                settings.kafka_bootstrap_servers
-            ),  # for cluster connections and the address
-            "client.id": ("paysim-generator"),
-            "acks": (
-                "all"
-            ),  # tells kafka to use isr to ensure all messages are received before retuing success
-            "enable.idempotence": True,  # sequence the messages in order
-            "compression.type": "lz4",  # compression algorithms
-            "linger.ms": 5,  # waith 5 miliseconds before sending another message
-        }
-    )
+    producer = Producer(_build_producer_config(settings))
+    if settings.kafka_iam_auth:
+        producer.poll(0)  # triggers the first oauth token fetch
+    return producer
 
 
 # used in combing the fraid data and actual data
