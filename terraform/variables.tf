@@ -57,3 +57,13 @@ variable "tfstate_bucket_name" {
   type    = string
   default = "paysim-tfstate-amonmugo"
 }
+
+variable "generator_ecr_repository_name" {
+  type    = string
+  default = "paysim-generator"
+}
+
+variable "generator_image_tag" {
+  type    = string
+  default = "v1"
+}
