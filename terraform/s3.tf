@@ -1,4 +1,4 @@
-#you know it the stotage
+#used for storage configuration
 
 resource "aws_s3_bucket" "paysim_fraud_pipeline_raw" {
   bucket = var.raw_bucket_name
