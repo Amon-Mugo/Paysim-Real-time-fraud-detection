@@ -62,6 +62,7 @@ resource "aws_iam_policy" "paysim_fraud_pipeline_generator_msk_access" {
       {
         Effect = "Allow"
         Action = [
+          "kafka-cluster:CreateTopic",   # Create the topic at generator startup when it is missing
           "kafka-cluster:DescribeTopic", # Enable inspect and query kafka data
           "kafka-cluster:WriteData"      # Enable to produce and write message into kafka topic
         ]

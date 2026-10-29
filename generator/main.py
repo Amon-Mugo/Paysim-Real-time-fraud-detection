@@ -8,7 +8,9 @@ import argparse
 import logging
 from pathlib import Path
 from generator.config import GeneratorConfig
+from confluent_kafka import KafkaException
 from generator.producer import replay
+from generator.topic_admin import ensure_topic
 import sys
 from collections.abc import Sequence  # used in sequence execution
 
@@ -158,6 +160,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     )  # used to log if the configuration message
 
     try:
+        ensure_topic(settings)
         stats = replay(settings, max_events=args.max_events)
     except KeyboardInterrupt:  # enable manula cancelations
         logger.warning("Interupted queued message were flashed before exit")
@@ -166,6 +169,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         RuntimeError,
         OSError,
         ValueError,
+        KafkaException,
     ) as error:  # catch kafka error and network flactuations
         logger.error("Replay failed : %s", error)
         return EXIT_REPLAY_FAILED
