@@ -65,5 +65,5 @@ variable "generator_ecr_repository_name" {
 
 variable "generator_image_tag" {
   type    = string
-  default = "v1"
+  default = "v2"
 }
