@@ -50,6 +50,23 @@ _DEFAULT_ICEBERG_WAREHOUSE = str(PROJECT_ROOT / "data" / "iceberg" / "warehouse"
 _DEFAULT_ICEBERG_DATABASE = "fraud_detection"
 _DEFAULT_TRANSACTIONS_TABLE = "transactions"
 _DEFAULT_ALERTS_TABLE = "alerts"
+_DEFAULT_SNOWFLAKE_ACCOUNT = ""
+_DEFAULT_SNOWFLAKE_WAREHOUSE = "FRAUD_WH"
+_DEFAULT_SNOWFLAKE_DATABASE = "FRAUD_DETECTION"
+_DEFAULT_SNOWFLAKE_SCHEMA = "MONITORING"
+_DEFAULT_SNOWFLAKE_ROLE = "FRAUD_WRITER"
+_DEFAULT_SNOWFLAKE_SECRET_NAME = "paysim-fraud-pipeline/snowflake"
+_DEFAULT_SNOWFLAKE_TRANSACTIONS_TABLE = "TRANSACTIONS_RECENT"
+_DEFAULT_SNOWFLAKE_ALERTS_TABLE = "ALERTS"
+_SNOWFLAKE_REQUIRED_SETTINGS = (
+    "snowflake_warehouse",
+    "snowflake_database",
+    "snowflake_schema",
+    "snowflake_role",
+    "snowflake_secret_name",
+    "snowflake_transactions_table",
+    "snowflake_alerts_table",
+)
 
 
 # used to parse the date into proper time
@@ -88,6 +105,14 @@ class DetectionConfig:
     iceberg_database: str = _DEFAULT_ICEBERG_DATABASE
     transactions_table: str = _DEFAULT_TRANSACTIONS_TABLE
     alerts_table: str = _DEFAULT_ALERTS_TABLE
+    snowflake_account: str = _DEFAULT_SNOWFLAKE_ACCOUNT
+    snowflake_warehouse: str = _DEFAULT_SNOWFLAKE_WAREHOUSE
+    snowflake_database: str = _DEFAULT_SNOWFLAKE_DATABASE
+    snowflake_schema: str = _DEFAULT_SNOWFLAKE_SCHEMA
+    snowflake_role: str = _DEFAULT_SNOWFLAKE_ROLE
+    snowflake_secret_name: str = _DEFAULT_SNOWFLAKE_SECRET_NAME
+    snowflake_transactions_table: str = _DEFAULT_SNOWFLAKE_TRANSACTIONS_TABLE
+    snowflake_alerts_table: str = _DEFAULT_SNOWFLAKE_ALERTS_TABLE
 
     # used for automatic validations of configurations not for the fraud rules implementations
     def __post_init__(self) -> None:
@@ -142,6 +167,9 @@ class DetectionConfig:
             raise ValueError("transactions_table must not be empty")
         if not self.alerts_table.strip():
             raise ValueError("alerts_table must not be empty")
+        for name in _SNOWFLAKE_REQUIRED_SETTINGS:
+            if not getattr(self, name).strip():
+                raise ValueError(f"{name} must not be empty")
         if self.transactions_table == self.alerts_table:
             raise ValueError("transactions_table and alerts_table must differ")
         if self.velocity_min_transactions < 2:
@@ -155,6 +183,28 @@ class DetectionConfig:
             ),
             kafka_topic=os.environ.get("KAFKA_TOPIC", _DEFAULT_KAFKA_TOPIC),
             model_dir=os.environ.get("DETECTION_MODEL_DIR", _DEFAULT_MODEL_DIR),
+            snowflake_account=os.environ.get(
+                "SNOWFLAKE_ACCOUNT", _DEFAULT_SNOWFLAKE_ACCOUNT
+            ),
+            snowflake_warehouse=os.environ.get(
+                "SNOWFLAKE_WAREHOUSE", _DEFAULT_SNOWFLAKE_WAREHOUSE
+            ),
+            snowflake_database=os.environ.get(
+                "SNOWFLAKE_DATABASE", _DEFAULT_SNOWFLAKE_DATABASE
+            ),
+            snowflake_schema=os.environ.get(
+                "SNOWFLAKE_SCHEMA", _DEFAULT_SNOWFLAKE_SCHEMA
+            ),
+            snowflake_role=os.environ.get("SNOWFLAKE_ROLE", _DEFAULT_SNOWFLAKE_ROLE),
+            snowflake_secret_name=os.environ.get(
+                "SNOWFLAKE_SECRET_NAME", _DEFAULT_SNOWFLAKE_SECRET_NAME
+            ),
+            snowflake_transactions_table=os.environ.get(
+                "SNOWFLAKE_TRANSACTIONS_TABLE", _DEFAULT_SNOWFLAKE_TRANSACTIONS_TABLE
+            ),
+            snowflake_alerts_table=os.environ.get(
+                "SNOWFLAKE_ALERTS_TABLE", _DEFAULT_SNOWFLAKE_ALERTS_TABLE
+            ),
             iceberg_catalog_name=os.environ.get(
                 "ICEBERG_CATALOG_NAME", _DEFAULT_ICEBERG_CATALOG_NAME
             ),
