@@ -29,6 +29,7 @@ def _build_config() -> SimpleNamespace:
         geo_state_ttl=timedelta(minutes=60),
         watermark_delay=timedelta(minutes=10),
         model_dir="unused",
+        snowflake_account="",
     )
 
 
@@ -98,3 +99,103 @@ def test_transactions_landing_query_receives_the_scored_frame(wiring):
 
 def test_tripwire_listener_is_registered_once(wiring):
     wiring.spark.streams.addListener.assert_called_once_with("listener")
+
+
+_SNOWFLAKE_STARTERS = (
+    "start_snowflake_structuring_landing_query",
+    "start_snowflake_velocity_landing_query",
+    "start_snowflake_geo_landing_query",
+    "start_snowflake_transactions_landing_query",
+)
+
+
+def _config_with_account(account: str) -> SimpleNamespace:
+    config = _build_config()
+    config.snowflake_account = account
+    return config
+
+
+def _start_snowflake(config: SimpleNamespace) -> list:
+    return job._start_snowflake_queries(
+        "structuring", "velocity", "geo", SCORED_FRAME, MANIFEST, config
+    )
+
+
+@pytest.fixture
+def snowflake_starts(monkeypatch):
+    received: dict[str, tuple] = {}
+    build_calls: list = []
+    sinks = ("stage_batch", "run_sql")
+
+    def _build_sinks(config):
+        build_calls.append(config)
+        return sinks
+
+    def _record_start(name: str):
+        def start(*args):
+            received[name] = args
+            return f"query:{name}"
+
+        return start
+
+    monkeypatch.setattr(job, "build_snowflake_sinks", _build_sinks)
+    for name in _SNOWFLAKE_STARTERS:
+        monkeypatch.setattr(job, name, _record_start(name))
+    return SimpleNamespace(received=received, build_calls=build_calls, sinks=sinks)
+
+
+def test_snowflake_queries_are_skipped_without_an_account(snowflake_starts):
+    queries = _start_snowflake(_config_with_account(""))
+
+    assert queries == []
+    assert snowflake_starts.build_calls == []
+    assert snowflake_starts.received == {}
+
+
+def test_snowflake_queries_start_in_landing_order_with_an_account(snowflake_starts):
+    queries = _start_snowflake(_config_with_account("xy12345.us-east-1"))
+
+    assert queries == [f"query:{name}" for name in _SNOWFLAKE_STARTERS]
+
+
+def test_snowflake_sinks_are_built_once_and_shared(snowflake_starts):
+    config = _config_with_account("xy12345.us-east-1")
+
+    _start_snowflake(config)
+
+    assert snowflake_starts.build_calls == [config]
+    for args in snowflake_starts.received.values():
+        assert args[-2:] == snowflake_starts.sinks
+
+
+def test_each_snowflake_alert_query_receives_its_own_frame(snowflake_starts):
+    config = _config_with_account("xy12345.us-east-1")
+    sinks = snowflake_starts.sinks
+
+    _start_snowflake(config)
+
+    received = snowflake_starts.received
+    assert received["start_snowflake_structuring_landing_query"] == (
+        "structuring",
+        config,
+        *sinks,
+    )
+    assert received["start_snowflake_velocity_landing_query"] == (
+        "velocity",
+        config,
+        *sinks,
+    )
+    assert received["start_snowflake_geo_landing_query"] == ("geo", config, *sinks)
+
+
+def test_snowflake_transactions_query_receives_the_scored_frame(snowflake_starts):
+    config = _config_with_account("xy12345.us-east-1")
+
+    _start_snowflake(config)
+
+    assert snowflake_starts.received["start_snowflake_transactions_landing_query"] == (
+        SCORED_FRAME,
+        MANIFEST,
+        config,
+        *snowflake_starts.sinks,
+    )
