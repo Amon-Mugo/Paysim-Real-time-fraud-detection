@@ -19,9 +19,17 @@ from spark.geo import detect_impossible_travel  # used to import detection logic
 from spark.iceberg_session import iceberg_packages, iceberg_spark_conf
 from spark.iceberg_tables import create_landing_tables
 from spark.landing import start_transactions_landing_query
+from spark.model_contract import ModelManifest
 from spark.model_loader import load_model
 from spark.schema import parse_transactions  # used in decrialisation of the json
 from spark.scoring import score_transactions
+from spark.snowflake_landing import (
+    start_snowflake_geo_landing_query,
+    start_snowflake_structuring_landing_query,
+    start_snowflake_transactions_landing_query,
+    start_snowflake_velocity_landing_query,
+)
+from spark.snowflake_writer import build_snowflake_sinks
 from spark.structuring import (
     detect_structuring,
 )  # used for catching structuring behavour for aml
@@ -112,6 +120,36 @@ def _start_tripwire_query(
     )
 
 
+# used to start the four Snowflake landing queries once an account is configured
+def _start_snowflake_queries(
+    structuring_alerts: DataFrame,
+    velocity_alerts: DataFrame,
+    travel_alerts: DataFrame,
+    scored_transactions: DataFrame,
+    manifest: ModelManifest,
+    config: DetectionConfig,
+) -> List[StreamingQuery]:
+    if not config.snowflake_account:
+        logger.info(
+            "SNOWFLAKE_ACCOUNT is not set; skipping the Snowflake landing queries"
+        )
+        return []
+
+    stage_batch, run_sql = build_snowflake_sinks(config)
+    return [
+        start_snowflake_structuring_landing_query(
+            structuring_alerts, config, stage_batch, run_sql
+        ),
+        start_snowflake_velocity_landing_query(
+            velocity_alerts, config, stage_batch, run_sql
+        ),
+        start_snowflake_geo_landing_query(travel_alerts, config, stage_batch, run_sql),
+        start_snowflake_transactions_landing_query(
+            scored_transactions, manifest, config, stage_batch, run_sql
+        ),
+    ]
+
+
 # used as the main orchestration for the pipeline to bind all 4 helper functions
 def start_detecion_queries(
     spark: SparkSession, config: DetectionConfig
@@ -163,13 +201,24 @@ def start_detecion_queries(
         TripwireListener(ledger)
     )  # used for background monitoring of the pipeline health
 
-    return [
+    queries = [
         start_structuring_landing_query(structuring_alerts, config),
         start_velocity_landing_query(velocity_alerts, config),
         start_geo_landing_query(travel_alerts, config),
         start_transactions_landing_query(scored_transactions, manifest, config),
         _start_tripwire_query(transactions, ledger, config),
     ]
+    queries.extend(
+        _start_snowflake_queries(
+            structuring_alerts,
+            velocity_alerts,
+            travel_alerts,
+            scored_transactions,
+            manifest,
+            config,
+        )
+    )
+    return queries
 
 
 # orchestartion entry pint
