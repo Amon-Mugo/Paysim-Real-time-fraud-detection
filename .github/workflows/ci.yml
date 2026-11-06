@@ -100,3 +100,9 @@ jobs:
         with:
           dockerfile: docker/generator/Dockerfile
           failure-threshold: warning
+
+      - name: Lint EMR Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: docker/emr/Dockerfile
+          failure-threshold: warning
