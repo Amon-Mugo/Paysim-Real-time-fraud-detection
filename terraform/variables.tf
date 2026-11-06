@@ -35,7 +35,7 @@ variable "emr_application_name" {
 
 variable "emr_image_tag" {
   type    = string
-  default = "v5"
+  default = "v1"
 }
 
 variable "emr_execution_role_name" {
