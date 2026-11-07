@@ -2,10 +2,11 @@
 FROM public.ecr.aws/emr-serverless/spark4/emr-spark-8.0.0@sha256:408d7061fa112f2402606eab2a18aa01b5e946549c0249fab708d8e05344ebbe
 
 #snowalke spark connector
-ARG SNOWFLAKE_SPARK_VERSION=3.1.1  
+ARG SNOWFLAKE_SPARK_VERSION=3.2.3-spark_4.0
 
 #snowflake jdb driver 
-ARG SNOWFLAKE_JDBC_VERSION=3.19.0
+ARG SNOWFLAKE_JDBC_VERSION=4.0.2
+
 
 USER root
 

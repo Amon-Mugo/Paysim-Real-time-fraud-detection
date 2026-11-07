@@ -48,9 +48,7 @@ logger = logging.getLogger(__name__)
 APP_NAME = "fraud-aml-detection"  # used to be displayed in UI in spark
 SESSION_TIME_ZONE = "UTC"  # gloabal time to be used
 LOCAL_SHUFFLE_PARTITION = 4
-SNOWFLAKE_CONNECTOR_PACKAGE = (
-    "net.snowflake:spark-snowflake_2.13:3.1.1"  # used for the snowflake connector
-)
+SNOWFLAKE_CONNECTOR_PACKAGE = "net.snowflake:spark-snowflake_2.13:3.2.3-spark_4.0"  # used for the snowflake connector
 
 
 # set up gloabal logger message due to numerous imported files
