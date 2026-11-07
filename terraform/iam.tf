@@ -262,3 +262,23 @@ resource "aws_iam_role_policy_attachment" "paysim_fraud_pipeline_emr_glue_access
   role       = aws_iam_role.paysim_fraud_pipeline_emr_execution.name
   policy_arn = aws_iam_policy.paysim_fraud_pipeline_emr_glue_access.arn
 }
+
+# Snowflake credentials for the Spark Snowflake writer.
+resource "aws_iam_policy" "paysim_fraud_pipeline_emr_snowflake_secret" {
+  name        = "paysim-fraud-pipeline-emr-snowflake-secret-policy"
+  description = "Allows EMR Serverless to read the Snowflake credentials secret"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["secretsmanager:GetSecretValue"]
+      Resource = "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:paysim-fraud-pipeline/snowflake-*"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "paysim_fraud_pipeline_emr_snowflake_secret" {
+  role       = aws_iam_role.paysim_fraud_pipeline_emr_execution.name
+  policy_arn = aws_iam_policy.paysim_fraud_pipeline_emr_snowflake_secret.arn
+}

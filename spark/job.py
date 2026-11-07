@@ -4,6 +4,7 @@ from pyspark.sql import DataFrame, SparkSession
 from typing import List
 from pyspark.sql.streaming import StreamingQuery
 import pyspark
+import os
 import logging
 from pathlib import Path
 from spark.alert_landing import (
@@ -79,11 +80,18 @@ def _geo_state_ttl_minutes(config: DetectionConfig) -> int:
 
 # set up spark engine and kafka connection
 def build_spark_session(
-    config: DetectionConfig, app_name: str = APP_NAME
+    config: DetectionConfig,
+    app_name: str = APP_NAME,
+    download_packages: bool = True,
 ) -> SparkSession:
-    return (
+    builder = (
         SparkSession.builder.appName(app_name)
-        .config(
+        .config("spark.sql.session.timeZone", SESSION_TIME_ZONE)
+        .config("spark.sql.shuffle.partitions", str(LOCAL_SHUFFLE_PARTITION))
+        .config(map=iceberg_spark_conf(config))
+    )
+    if download_packages:
+        builder = builder.config(
             "spark.jars.packages",
             ",".join(
                 [
@@ -91,13 +99,20 @@ def build_spark_session(
                     *iceberg_packages(config),
                     SNOWFLAKE_CONNECTOR_PACKAGE,
                 ]
-            ),  # join the snowflake connector
+            ),
         )
-        .config("spark.sql.session.timeZone", SESSION_TIME_ZONE)
-        .config("spark.sql.shuffle.partitions", str(LOCAL_SHUFFLE_PARTITION))
-        .config(map=iceberg_spark_conf(config))
-        .getOrCreate()
-    )
+    return builder.getOrCreate()
+
+
+def _kafka_auth_options() -> dict[str, str]:
+    if os.environ.get("KAFKA_SECURITY_PROTOCOL", "PLAINTEXT") != "SASL_SSL":
+        return {}
+    return {
+        "kafka.security.protocol": "SASL_SSL",
+        "kafka.sasl.mechanism": "AWS_MSK_IAM",
+        "kafka.sasl.jaas.config": "software.amazon.msk.auth.iam.IAMLoginModule required;",
+        "kafka.sasl.client.callback.handler.class": "software.amazon.msk.auth.iam.IAMClientCallbackHandler",
+    }
 
 
 # engine fo kafka connection and how to read the message
@@ -108,6 +123,7 @@ def _read_transactions(spark: SparkSession, config: DetectionConfig) -> DataFram
         .option("subscribe", config.kafka_topic)
         .option("startingOffsets", config.kafka_starting_offsets)
         .option("maxOffsetsPerTrigger", config.kafka_max_offset_per_trigger)
+        .options(**_kafka_auth_options())
         .load()
     )
     return parse_transactions(raw_events)
@@ -230,12 +246,16 @@ def start_detecion_queries(
     return queries
 
 
+def _download_packages_enabled() -> bool:
+    return os.environ.get("SPARK_DOWNLOAD_PACKAGES", "true").lower() != "false"
+
+
 # orchestartion entry pint
 def main() -> None:
     _configure_logging()
     config = DetectionConfig.from_env()
     logger.info("Starting detection jobs: %s", config)
-    spark = build_spark_session(config)
+    spark = build_spark_session(config, download_packages=_download_packages_enabled())
     start_detecion_queries(spark, config)
     spark.streams.awaitAnyTermination()
 

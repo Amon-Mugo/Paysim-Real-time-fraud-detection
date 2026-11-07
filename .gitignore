@@ -7,3 +7,5 @@ data/ground_truth.jsonl
 
 # Terraform plan files
 *.tfplan
+build/
+*.tfplan
