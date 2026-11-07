@@ -37,6 +37,7 @@ build_spark_submit_parameters() {
     "ICEBERG_DATABASE=paysim_fraud_db" \
     "KAFKA_BOOTSTRAP_SERVERS=${brokers}" \
     "KAFKA_SECURITY_PROTOCOL=SASL_SSL" \
+    "SNOWFLAKE_ACCOUNT=DPEJXQE-YR77482" \
     "DETECTION_CHECKPOINT_LOCATION=${CURATED_BUCKET}/checkpoints/detection" \
     "DETECTION_MODEL_DIR=./${MODEL_ALIAS}/stub-v1")"
   echo "--py-files ${CURATED_BUCKET}/code/spark.zip" \
