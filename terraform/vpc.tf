@@ -125,7 +125,7 @@ resource "aws_vpc_endpoint" "s3" {
 }
 
 resource "aws_vpc_endpoint" "interface" {
-  for_each = toset(["ecr.api", "ecr.dkr", "sts", "logs"])
+  for_each = toset(["ecr.api", "ecr.dkr", "sts", "logs", "glue"])
 
   vpc_id              = aws_vpc.paysim_fraud_pipeline.id
   service_name        = "com.amazonaws.${data.aws_region.current.name}.${each.value}"

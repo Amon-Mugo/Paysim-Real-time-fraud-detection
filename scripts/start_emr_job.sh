@@ -38,10 +38,13 @@ build_spark_submit_parameters() {
     "KAFKA_BOOTSTRAP_SERVERS=${brokers}" \
     "KAFKA_SECURITY_PROTOCOL=SASL_SSL" \
     "SNOWFLAKE_ACCOUNT=DPEJXQE-YR77482" \
+    "PYSPARK_PYTHON=/opt/venv/bin/python" \
+    "PYSPARK_DRIVER_PYTHON=/opt/venv/bin/python" \
     "DETECTION_CHECKPOINT_LOCATION=${CURATED_BUCKET}/checkpoints/detection" \
     "DETECTION_MODEL_DIR=./${MODEL_ALIAS}/stub-v1")"
   echo "--py-files ${CURATED_BUCKET}/code/spark.zip" \
     "--archives ${CURATED_BUCKET}/models/fraud/stub-v1.zip#${MODEL_ALIAS}" \
+    "--conf spark.driver.cores=1 --conf spark.driver.memory=4g --conf spark.executor.cores=1 --conf spark.executor.memory=4g --conf spark.executor.instances=2 --conf spark.dynamicAllocation.enabled=false" \
     "${env_conf}"
 }
 
