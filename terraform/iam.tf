@@ -180,6 +180,10 @@ resource "aws_iam_policy" "paysim_fraud_pipeline_emr_logging" {
         "arn:aws:logs:*:${data.aws_caller_identity.current.account_id}:log-group:/aws/emr-serverless*",
         "arn:aws:logs:*:${data.aws_caller_identity.current.account_id}:log-group:/aws/emr-serverless*:*"
       ]
+      }, {
+      Effect   = "Allow"
+      Action   = "logs:DescribeLogGroups"
+      Resource = "arn:aws:logs:*:${data.aws_caller_identity.current.account_id}:log-group::log-stream:"
     }]
   })
 }
