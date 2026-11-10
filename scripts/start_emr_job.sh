@@ -44,7 +44,7 @@ build_spark_submit_parameters() {
     "DETECTION_MODEL_DIR=./${MODEL_ALIAS}/stub-v1")"
   echo "--py-files ${CURATED_BUCKET}/code/spark.zip" \
     "--archives ${CURATED_BUCKET}/models/fraud/stub-v1.zip#${MODEL_ALIAS}" \
-    "--conf spark.driver.cores=1 --conf spark.driver.memory=4g --conf spark.executor.cores=1 --conf spark.executor.memory=4g --conf spark.executor.instances=2 --conf spark.dynamicAllocation.enabled=false" \
+    "--jars /usr/lib/spark/connector/lib/spark-sql-kafka-0-10.jar,/usr/lib/spark/connector/lib/spark-token-provider-kafka-0-10.jar,/usr/share/aws/iceberg/lib/iceberg-spark-runtime-4.0_2.13-1.10.1-amzn-0.jar --conf spark.driver.cores=1 --conf spark.driver.memory=4g --conf spark.executor.cores=1 --conf spark.executor.memory=4g --conf spark.executor.instances=2 --conf spark.dynamicAllocation.enabled=false" \
     "${env_conf}"
 }
 
