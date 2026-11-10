@@ -37,6 +37,7 @@ build_spark_submit_parameters() {
     "ICEBERG_DATABASE=paysim_fraud_db" \
     "KAFKA_BOOTSTRAP_SERVERS=${brokers}" \
     "KAFKA_SECURITY_PROTOCOL=SASL_SSL" \
+    "AWS_REGION=us-east-1" \
     "SNOWFLAKE_ACCOUNT=DPEJXQE-YR77482" \
     "PYSPARK_PYTHON=/opt/venv/bin/python" \
     "PYSPARK_DRIVER_PYTHON=/opt/venv/bin/python" \
