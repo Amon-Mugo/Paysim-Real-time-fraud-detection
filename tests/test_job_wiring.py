@@ -10,7 +10,7 @@ import pytest
 
 from spark import job
 
-SCORED_FRAME = object()
+STREAM_FRAME = SimpleNamespace(columns=[])
 MANIFEST = SimpleNamespace(model_version="test-v1")
 
 
@@ -51,12 +51,12 @@ def wiring(monkeypatch):
 
     monkeypatch.setattr(job, "spark_interval", str)
     monkeypatch.setattr(job, "create_landing_tables", _create_tables)
-    monkeypatch.setattr(job, "_read_transactions", lambda spark, config: "stream")
+    monkeypatch.setattr(job, "_read_transactions", lambda spark, config: STREAM_FRAME)
     monkeypatch.setattr(job, "detect_structuring", lambda *a, **k: "structuring")
     monkeypatch.setattr(job, "detect_velocity", lambda *a, **k: "velocity")
     monkeypatch.setattr(job, "detect_impossible_travel", lambda *a, **k: "geo")
     monkeypatch.setattr(job, "load_model", lambda path: (MANIFEST, "model"))
-    monkeypatch.setattr(job, "score_transactions", lambda *a: SCORED_FRAME)
+    monkeypatch.setattr(job, "check_feature_compatibility", lambda *a: None)
     monkeypatch.setattr(job, "TripwireListener", lambda ledger: "listener")
     for name in (
         "start_structuring_landing_query",
@@ -90,9 +90,12 @@ def test_landing_tables_are_created_before_any_query_starts(wiring):
     assert wiring.events.count("create_landing_tables") == 1
 
 
-def test_transactions_landing_query_receives_the_scored_frame(wiring):
-    scored, manifest, config = wiring.received["start_transactions_landing_query"]
-    assert scored is SCORED_FRAME
+def test_transactions_landing_query_receives_the_stream_and_model(wiring):
+    transactions, manifest, model, config = wiring.received[
+        "start_transactions_landing_query"
+    ]
+    assert transactions is STREAM_FRAME
+    assert model == "model"
     assert manifest is MANIFEST
     assert config is wiring.config
 
@@ -117,7 +120,7 @@ def _config_with_account(account: str) -> SimpleNamespace:
 
 def _start_snowflake(config: SimpleNamespace) -> list:
     return job._start_snowflake_queries(
-        "structuring", "velocity", "geo", SCORED_FRAME, MANIFEST, config
+        "structuring", "velocity", "geo", STREAM_FRAME, MANIFEST, "model", config
     )
 
 
@@ -188,14 +191,15 @@ def test_each_snowflake_alert_query_receives_its_own_frame(snowflake_starts):
     assert received["start_snowflake_geo_landing_query"] == ("geo", config, *sinks)
 
 
-def test_snowflake_transactions_query_receives_the_scored_frame(snowflake_starts):
+def test_snowflake_transactions_query_receives_the_stream_and_model(snowflake_starts):
     config = _config_with_account("xy12345.us-east-1")
 
     _start_snowflake(config)
 
     assert snowflake_starts.received["start_snowflake_transactions_landing_query"] == (
-        SCORED_FRAME,
+        STREAM_FRAME,
         MANIFEST,
+        "model",
         config,
         *snowflake_starts.sinks,
     )

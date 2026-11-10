@@ -115,8 +115,16 @@ def config(
     return isolated
 
 
+@pytest.fixture(autouse=True)
+def _rows_arrive_pre_scored(monkeypatch):
+    """Pass pre-scored rows straight through; scoring has its own tests."""
+    monkeypatch.setattr(
+        "spark.landing.score_transactions", lambda batch, manifest, model: batch
+    )
+
+
 def test_every_scored_row_lands_in_transactions(iceberg_spark, config):
-    write_batch = build_transactions_writer(MANIFEST, config)
+    write_batch = build_transactions_writer(MANIFEST, "model", config)
 
     write_batch(
         _batch(iceberg_spark, _scored_row("t1", 0.1), _scored_row("t2", 0.9, 1)), 0
@@ -127,7 +135,7 @@ def test_every_scored_row_lands_in_transactions(iceberg_spark, config):
 
 
 def test_transactions_carry_the_model_version(iceberg_spark, config):
-    write_batch = build_transactions_writer(MANIFEST, config)
+    write_batch = build_transactions_writer(MANIFEST, "model", config)
 
     write_batch(_batch(iceberg_spark, _scored_row("t1", 0.1)), 0)
 
@@ -136,7 +144,7 @@ def test_transactions_carry_the_model_version(iceberg_spark, config):
 
 
 def test_only_scores_at_or_above_threshold_become_alerts(iceberg_spark, config):
-    write_batch = build_transactions_writer(MANIFEST, config)
+    write_batch = build_transactions_writer(MANIFEST, "model", config)
 
     write_batch(
         _batch(
@@ -153,7 +161,7 @@ def test_only_scores_at_or_above_threshold_become_alerts(iceberg_spark, config):
 
 
 def test_alerts_use_the_ml_rule_name(iceberg_spark, config):
-    write_batch = build_transactions_writer(MANIFEST, config)
+    write_batch = build_transactions_writer(MANIFEST, "model", config)
 
     write_batch(_batch(iceberg_spark, _scored_row("t1", 0.99)), 0)
 
@@ -164,7 +172,7 @@ def test_alerts_use_the_ml_rule_name(iceberg_spark, config):
 
 
 def test_batch_below_threshold_writes_no_alerts(iceberg_spark, config):
-    write_batch = build_transactions_writer(MANIFEST, config)
+    write_batch = build_transactions_writer(MANIFEST, "model", config)
 
     write_batch(_batch(iceberg_spark, _scored_row("t1", 0.1)), 0)
 
@@ -172,7 +180,7 @@ def test_batch_below_threshold_writes_no_alerts(iceberg_spark, config):
 
 
 def test_replayed_batch_inserts_nothing_twice(iceberg_spark, config):
-    write_batch = build_transactions_writer(MANIFEST, config)
+    write_batch = build_transactions_writer(MANIFEST, "model", config)
     batch = _batch(iceberg_spark, _scored_row("t1", 0.1), _scored_row("t2", 0.9, 1))
 
     write_batch(batch, 0)
@@ -185,7 +193,7 @@ def test_replayed_batch_inserts_nothing_twice(iceberg_spark, config):
 
 
 def test_duplicate_keys_inside_one_batch_land_once(iceberg_spark, config):
-    write_batch = build_transactions_writer(MANIFEST, config)
+    write_batch = build_transactions_writer(MANIFEST, "model", config)
 
     write_batch(
         _batch(iceberg_spark, _scored_row("t1", 0.9), _scored_row("t1", 0.9, 1)), 0
@@ -202,7 +210,7 @@ def test_start_query_wires_name_checkpoint_and_writer():
         scored.writeStream.queryName.return_value.foreachBatch.return_value.option.return_value.trigger.return_value.start.return_value
     )
 
-    started = start_transactions_landing_query(scored, MANIFEST, config)
+    started = start_transactions_landing_query(scored, MANIFEST, "model", config)
 
     named = scored.writeStream.queryName
     named.assert_called_once_with(TRANSACTIONS_QUERY_NAME)

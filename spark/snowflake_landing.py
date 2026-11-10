@@ -18,7 +18,8 @@ from spark.config import DetectionConfig, spark_interval
 from spark.geo import RULE_NAME as GEO_RULE_NAME
 from spark.iceberg_tables import transactions_schema
 from spark.landing import ALERT_KEY, TRANSACTION_KEY, _ml_alert_rows, _transaction_row
-from spark.model_contract import ModelManifest
+from spark.model_contract import FraudModel, ModelManifest
+from spark.scoring import score_transactions
 from spark.snowflake_merge import BatchWriter, RunSql, StageBatch, build_merge_writer
 from spark.structuring import RULE_NAME as STRUCTURING_RULE_NAME
 from spark.velocity import RULE_NAME as VELOCITY_RULE_NAME
@@ -86,6 +87,7 @@ def build_snowflake_alerts_writer(
 # used to merge the scored transactions and ML alerts they raise form such trnasactions
 def build_snowflake_transactions_writer(
     manifest: ModelManifest,
+    model: FraudModel,
     config: DetectionConfig,
     stage_batch: StageBatch,
     run_sql: RunSql,
@@ -105,7 +107,8 @@ def build_snowflake_transactions_writer(
     )
 
     def write_batch(batch: DataFrame, batch_id: int) -> None:
-        rows = _transaction_row(batch, manifest).persist()
+        scored = score_transactions(batch, manifest, model)
+        rows = _transaction_row(scored, manifest).persist()
         # used to standardise the row rules needed to land in snowflake
         try:
             merge_transactions(rows, batch_id)  # merge the transactions into snowflake
@@ -151,15 +154,18 @@ def _start_alerts_landing_query(
 
 # main function to stream the transaction to snowflake
 def start_snowflake_transactions_landing_query(
-    scored: DataFrame,
+    transactions: DataFrame,
     manifest: ModelManifest,
+    model: FraudModel,
     config: DetectionConfig,
     stage_batch: StageBatch,
     run_sql: RunSql,
 ) -> StreamingQuery:
-    writer = build_snowflake_transactions_writer(manifest, config, stage_batch, run_sql)
+    writer = build_snowflake_transactions_writer(
+        manifest, model, config, stage_batch, run_sql
+    )
 
-    return _start_landing_query(scored, TRANSACTION_QUERY_NAME, writer, config)
+    return _start_landing_query(transactions, TRANSACTION_QUERY_NAME, writer, config)
 
 
 # used to land the structuring alerts(sumrfing pattern) for anti  money laudnering

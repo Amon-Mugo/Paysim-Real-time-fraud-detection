@@ -17,9 +17,10 @@ from spark.iceberg_tables import (
     transactions_schema,
 )
 from spark.landing_parity import check_landing_parity
-from spark.model_contract import ModelManifest
+from spark.model_contract import FraudModel, ModelManifest
 from spark.scoring import RULE_NAME as ML_RULE_NAME
 from spark.scoring import SCORE_COLUMN
+from spark.scoring import score_transactions
 
 TRANSACTIONS_QUERY_NAME = "transactions_landing"  # used to label incoming data
 TRANSACTION_KEY = ["transaction_id"]
@@ -41,7 +42,7 @@ def _ml_alert_rows(rows: DataFrame, manifest: ModelManifest) -> DataFrame:
 
 # used to build a factory functions that writes the data to be streamed
 def build_transactions_writer(
-    manifest: ModelManifest, config: DetectionConfig
+    manifest: ModelManifest, model: FraudModel, config: DetectionConfig
 ) -> BatchWrite:
 
     # used to combine the table and databases
@@ -50,7 +51,8 @@ def build_transactions_writer(
 
     # used to execute the incoming data
     def write_batch(batch: DataFrame, batch_id: int) -> None:
-        rows = _transaction_row(batch, manifest).persist()
+        scored = score_transactions(batch, manifest, model)
+        rows = _transaction_row(scored, manifest).persist()
         try:
             merge_batch(rows, transaction_tables, TRANSACTION_KEY)
             check_landing_parity(rows, transaction_tables, TRANSACTION_KEY, batch_id)
@@ -65,11 +67,14 @@ def build_transactions_writer(
 
 # used to start the streaming
 def start_transactions_landing_query(
-    scored: DataFrame, manifest: ModelManifest, config: DetectionConfig
+    transactions: DataFrame,
+    manifest: ModelManifest,
+    model: FraudModel,
+    config: DetectionConfig,
 ) -> StreamingQuery:
     return (
-        scored.writeStream.queryName(TRANSACTIONS_QUERY_NAME)
-        .foreachBatch(build_transactions_writer(manifest, config))
+        transactions.writeStream.queryName(TRANSACTIONS_QUERY_NAME)
+        .foreachBatch(build_transactions_writer(manifest, model, config))
         .option(
             "checkpointLocation",
             f"{config.checkpoint_location}/{TRANSACTIONS_QUERY_NAME}",

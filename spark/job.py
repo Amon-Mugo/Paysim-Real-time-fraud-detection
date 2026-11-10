@@ -20,10 +20,9 @@ from spark.geo import detect_impossible_travel  # used to import detection logic
 from spark.iceberg_session import iceberg_packages, iceberg_spark_conf
 from spark.iceberg_tables import create_landing_tables
 from spark.landing import start_transactions_landing_query
-from spark.model_contract import ModelManifest
+from spark.model_contract import FraudModel, ModelManifest, check_feature_compatibility
 from spark.model_loader import load_model
 from spark.schema import parse_transactions  # used in decrialisation of the json
-from spark.scoring import score_transactions
 from spark.snowflake_landing import (
     start_snowflake_geo_landing_query,
     start_snowflake_structuring_landing_query,
@@ -148,8 +147,9 @@ def _start_snowflake_queries(
     structuring_alerts: DataFrame,
     velocity_alerts: DataFrame,
     travel_alerts: DataFrame,
-    scored_transactions: DataFrame,
+    transactions: DataFrame,
     manifest: ModelManifest,
+    model: FraudModel,
     config: DetectionConfig,
 ) -> List[StreamingQuery]:
     if not config.snowflake_account:
@@ -168,7 +168,7 @@ def _start_snowflake_queries(
         ),
         start_snowflake_geo_landing_query(travel_alerts, config, stage_batch, run_sql),
         start_snowflake_transactions_landing_query(
-            scored_transactions, manifest, config, stage_batch, run_sql
+            transactions, manifest, model, config, stage_batch, run_sql
         ),
     ]
 
@@ -216,7 +216,7 @@ def start_detecion_queries(
     # the model loads once at startup; a bad manifest or missing feature fails here
     manifest, model = load_model(Path(config.model_dir))
     logger.info("Loaded model %s", manifest.model_version)
-    scored_transactions = score_transactions(transactions, manifest, model)
+    check_feature_compatibility(transactions.columns, manifest)
     ledger = (
         BatchParityLedger()
     )  # used to log the batch id and the row counts of the tripwire
@@ -228,7 +228,7 @@ def start_detecion_queries(
         start_structuring_landing_query(structuring_alerts, config),
         start_velocity_landing_query(velocity_alerts, config),
         start_geo_landing_query(travel_alerts, config),
-        start_transactions_landing_query(scored_transactions, manifest, config),
+        start_transactions_landing_query(transactions, manifest, model, config),
         _start_tripwire_query(transactions, ledger, config),
     ]
     queries.extend(
@@ -236,8 +236,9 @@ def start_detecion_queries(
             structuring_alerts,
             velocity_alerts,
             travel_alerts,
-            scored_transactions,
+            transactions,
             manifest,
+            model,
             config,
         )
     )
