@@ -111,6 +111,7 @@ class DetectionConfig:
     snowflake_schema: str = _DEFAULT_SNOWFLAKE_SCHEMA
     snowflake_role: str = _DEFAULT_SNOWFLAKE_ROLE
     snowflake_secret_name: str = _DEFAULT_SNOWFLAKE_SECRET_NAME
+    snowflake_secret_region: str = ""
     snowflake_transactions_table: str = _DEFAULT_SNOWFLAKE_TRANSACTIONS_TABLE
     snowflake_alerts_table: str = _DEFAULT_SNOWFLAKE_ALERTS_TABLE
 
@@ -199,6 +200,7 @@ class DetectionConfig:
             snowflake_secret_name=os.environ.get(
                 "SNOWFLAKE_SECRET_NAME", _DEFAULT_SNOWFLAKE_SECRET_NAME
             ),
+            snowflake_secret_region=os.environ.get("AWS_REGION", ""),
             snowflake_transactions_table=os.environ.get(
                 "SNOWFLAKE_TRANSACTIONS_TABLE", _DEFAULT_SNOWFLAKE_TRANSACTIONS_TABLE
             ),

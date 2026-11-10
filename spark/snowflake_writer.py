@@ -50,9 +50,11 @@ def _der_from_pem(pem: str, passphrase: str | None) -> bytes:
 
 # used in retriving the credentials and validating them
 def load_credentials(
-    secret_name: str, secrets_client: Any | None = None
+    secret_name: str,
+    secrets_client: Any | None = None,
+    region_name: str | None = None,
 ) -> SnowflakeCredentials:
-    client = secrets_client or boto3.client("secretsmanager")
+    client = secrets_client or boto3.client("secretsmanager", region_name=region_name)
     # uses the secrets_clients for testing if there is any or default to the aws boto3.client
     response = client.get_secret_value(SecretId=secret_name)
     # used to retrive the secrets
@@ -144,7 +146,11 @@ def build_snowflake_sinks(
     secrets_client: Any | None = None,
     connect: Connect = snowflake.connector.connect,
 ) -> tuple[StageBatch, RunSql]:
-    credentials = load_credentials(config.snowflake_secret_name, secrets_client)
+    credentials = load_credentials(
+        config.snowflake_secret_name,
+        secrets_client,
+        config.snowflake_secret_region or None,
+    )
     stage_batch = make_stage_batch(build_spark_options(config, credentials))
     run_sql = make_run_sql(build_connect_kwargs(config, credentials), connect)
 
