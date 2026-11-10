@@ -241,10 +241,19 @@ _RULE_CASES = [
 ]
 
 
+@pytest.fixture(autouse=True)
+def _rows_arrive_pre_scored(monkeypatch):
+    """Pass pre-scored rows straight through; scoring has its own tests."""
+    monkeypatch.setattr(
+        "spark.snowflake_landing.score_transactions",
+        lambda batch, manifest, model: batch,
+    )
+
+
 def test_transactions_are_staged_merged_and_truncated(spark):
     events, stage_batch, run_sql = _make_recorder()
     write_batch = build_snowflake_transactions_writer(
-        MANIFEST, CONFIG, stage_batch, run_sql
+        MANIFEST, "model", CONFIG, stage_batch, run_sql
     )
 
     write_batch(_transactions_batch(spark, _scored_row("t1", 0.1)), 0)
@@ -264,7 +273,7 @@ def test_transactions_are_staged_merged_and_truncated(spark):
 def test_every_scored_row_is_staged_as_a_transaction(spark):
     events, stage_batch, run_sql = _make_recorder()
     write_batch = build_snowflake_transactions_writer(
-        MANIFEST, CONFIG, stage_batch, run_sql
+        MANIFEST, "model", CONFIG, stage_batch, run_sql
     )
 
     write_batch(
@@ -280,7 +289,7 @@ def test_every_scored_row_is_staged_as_a_transaction(spark):
 def test_only_scores_at_or_above_threshold_are_staged_as_ml_alerts(spark):
     events, stage_batch, run_sql = _make_recorder()
     write_batch = build_snowflake_transactions_writer(
-        MANIFEST, CONFIG, stage_batch, run_sql
+        MANIFEST, "model", CONFIG, stage_batch, run_sql
     )
 
     write_batch(
@@ -304,7 +313,7 @@ def test_only_scores_at_or_above_threshold_are_staged_as_ml_alerts(spark):
 def test_batch_below_threshold_stages_no_ml_alerts(spark):
     events, stage_batch, run_sql = _make_recorder()
     write_batch = build_snowflake_transactions_writer(
-        MANIFEST, CONFIG, stage_batch, run_sql
+        MANIFEST, "model", CONFIG, stage_batch, run_sql
     )
 
     write_batch(_transactions_batch(spark, _scored_row("t1", 0.1)), 0)
@@ -322,7 +331,7 @@ def test_a_failed_transactions_merge_skips_alerts_and_still_truncates(spark):
             raise RuntimeError("merge failed")
 
     write_batch = build_snowflake_transactions_writer(
-        MANIFEST, CONFIG, stage_batch, run_sql
+        MANIFEST, "model", CONFIG, stage_batch, run_sql
     )
 
     with pytest.raises(RuntimeError, match="merge failed"):
@@ -430,7 +439,7 @@ def test_transactions_query_wires_name_checkpoint_and_staging_table(spark):
     expected = option.return_value.trigger.return_value.start.return_value
 
     started = start_snowflake_transactions_landing_query(
-        scored, MANIFEST, CONFIG, stage_batch, run_sql
+        scored, MANIFEST, "model", CONFIG, stage_batch, run_sql
     )
 
     named.assert_called_once_with(TRANSACTION_QUERY_NAME)
