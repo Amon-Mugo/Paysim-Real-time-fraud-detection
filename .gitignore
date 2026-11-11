@@ -9,3 +9,5 @@ data/ground_truth.jsonl
 *.tfplan
 build/
 *.tfplan
+*.tfstate
+*.tfstate.*
