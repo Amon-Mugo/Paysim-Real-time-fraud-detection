@@ -11,3 +11,5 @@ build/
 *.tfplan
 *.tfstate
 *.tfstate.*
+.env
+airflow/logs/
