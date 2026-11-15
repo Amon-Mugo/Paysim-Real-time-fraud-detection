@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import time
+from dataclasses import asdict
 from datetime import datetime, timezone
 
 import boto3
@@ -17,6 +18,8 @@ from airflow.providers.amazon.aws.operators.ecs import EcsRunTaskOperator
 from airflow.sdk import DAG, Param, task
 from cryptography.hazmat.primitives import serialization
 import snowflake.connector
+from fraud_eval_fetch import count_transactions, fetch_alerts, read_ground_truth_lines
+from fraud_eval_scoring import evaluate as score_run, format_report, parse_ground_truth
 
 AWS_REGION = "us-east-1"
 MSK_CLUSTER_NAME = "paysim-fraud-pipeline"
@@ -280,6 +283,33 @@ def wait_for_landing(emr_job: dict[str, str]) -> dict[str, int | str]:
     )
 
 
+@task
+def evaluate(landing: dict[str, int | str], ground_truth_uri: str) -> dict:
+    """Score landed alerts against the ground-truth labels for this run."""
+    started_at = datetime.fromisoformat(str(landing["job_started_at"]))
+    elapsed = int((datetime.now(timezone.utc) - started_at).total_seconds())
+    ground_truth = parse_ground_truth(
+        read_ground_truth_lines(
+            boto3.client("s3", region_name=AWS_REGION), ground_truth_uri
+        )
+    )
+    connection = snowflake.connector.connect(**_snowflake_connect_kwargs())
+    try:
+        alerts = fetch_alerts(connection, elapsed)
+        total_transactions = count_transactions(connection, elapsed)
+    finally:
+        connection.close()
+    if not ground_truth:
+        raise AirflowFailException(
+            f"No ground-truth labels found in {ground_truth_uri}"
+        )
+    if total_transactions == 0:
+        raise AirflowFailException("No transactions landed in Snowflake for this run")
+    result = score_run(ground_truth, alerts, total_transactions)
+    logger.info("%s", format_report(result))
+    return asdict(result)
+
+
 @task(trigger_rule="all_done")
 def cancel_emr_job() -> list[str]:
     """Cancel any active run of the streaming job so the EMR application can stop."""
@@ -360,6 +390,10 @@ with DAG(
 
     landing = wait_for_landing(emr_job=emr_job)
 
+    evaluation = evaluate(
+        landing=landing,
+        ground_truth_uri=f"s3://{RAW_BUCKET}/ground-truth/eval_{{{{ ts_nodash }}}}.jsonl",
+    )
     cancel = cancel_emr_job()
 
-    brokers >> run_generator >> emr_job >> landing >> cancel
+    brokers >> run_generator >> emr_job >> landing >> [evaluation, cancel]

@@ -24,6 +24,7 @@ x-airflow-common: &airflow-common
     AWS_PROFILE: data-corp-admin
     AWS_DEFAULT_REGION: us-east-1
     AWS_REGION: us-east-1
+    PYTHONPATH: /opt/airflow/dags
   volumes:
     - ./airflow/dags:/opt/airflow/dags
     - ./airflow/logs:/opt/airflow/logs
