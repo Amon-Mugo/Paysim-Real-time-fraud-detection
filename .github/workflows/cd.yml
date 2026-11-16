@@ -1,0 +1,120 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: cd-production
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  deploy-image:
+    name: Push image and update EMR Serverless
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+      EMR_APPLICATION_NAME: ${{ vars.EMR_APPLICATION_NAME }}
+      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - name: Check out the commit that passed CI
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.CD_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Derive image tag and URI
+        id: image
+        run: |
+          tag="${HEAD_SHA:0:12}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "uri=${{ steps.ecr.outputs.registry }}/${ECR_REPOSITORY}:${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Check whether the tag already exists in ECR
+        id: exists
+        run: |
+          if aws ecr describe-images \
+            --repository-name "${ECR_REPOSITORY}" \
+            --image-ids imageTag="${{ steps.image.outputs.tag }}" > /dev/null 2>&1; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Docker Buildx
+        if: steps.exists.outputs.found == 'false'
+        uses: docker/setup-buildx-actions@v3
+
+      - name: Build and push EMR image
+        if: steps.exists.outputs.found == 'false'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/emr/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.image.outputs.uri }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Update EMR Serverless application image
+        run: |
+          app_id=$(aws emr-serverless list-applications \
+            --query "applications[?name=='${EMR_APPLICATION_NAME}'].id | [0]" \
+            --output text)
+          if [ -z "${app_id}" ] || [ "${app_id}" = "None" ]; then
+            echo "EMR application ${EMR_APPLICATION_NAME} not found" >&2
+            exit 1
+          fi
+
+          state=$(aws emr-serverless get-application \
+            --application-id "${app_id}" --query "application.state" --output text)
+          if [ "${state}" = "STARTED" ]; then
+            aws emr-serverless stop-application --application-id "${app_id}"
+          fi
+
+          for _ in $(seq 1 30); do
+            state=$(aws emr-serverless get-application \
+              --application-id "${app_id}" --query "application.state" --output text)
+            if [ "${state}" = "STOPPED" ] || [ "${state}" = "CREATED" ]; then
+              break
+            fi
+            sleep 10
+          done
+          if [ "${state}" != "STOPPED" ] && [ "${state}" != "CREATED" ]; then
+            echo "Application stuck in state ${state}" >&2
+            exit 1
+          fi
+
+          aws emr-serverless update-application \
+            --application-id "${app_id}" \
+            --image-configuration imageUri="${{ steps.image.outputs.uri }}"
+
+          deployed=$(aws emr-serverless get-application \
+            --application-id "${app_id}" \
+            --query "application.imageConfiguration.imageUri" --output text)
+          if [ "${deployed}" != "${{ steps.image.outputs.uri }}" ]; then
+            echo "Image mismatch: ${deployed}" >&2
+            exit 1
+          fi
+          echo "EMR application ${app_id} now runs ${deployed}"
